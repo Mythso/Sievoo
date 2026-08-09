@@ -314,77 +314,103 @@ export default function Calculator() {
               
               {/* STEP 1 */}
               <TabsContent value="step1" className="space-y-6 mt-0">
+                <div className="text-xs text-muted-foreground bg-muted/50 border border-border/50 p-3 rounded-md leading-relaxed">
+                  <span className="font-bold text-foreground">WACC</span> is the blended minimum return a company must earn to satisfy all its capital providers. It discounts your future cash flow projections back to today's value — a higher WACC = lower valuation. Formula: <span className="font-mono">WACC = (E/V) × Re + (D/V) × Rd × (1 − Tc)</span> where Re is calculated via CAPM: <span className="font-mono">Re = Rf + β × (Rm − Rf)</span>.
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h3 className="font-bold text-sm text-muted-foreground uppercase border-b border-border/50 pb-2">Cost of Equity</h3>
+                    <h3 className="font-bold text-sm text-muted-foreground uppercase border-b border-border/50 pb-2">Cost of Equity (CAPM)</h3>
                     <div className="grid gap-2">
-                      <Label className="text-xs">Risk-Free Rate (Rf %)</Label>
+                      <Label className="text-xs">Risk-Free Rate — Rf (%)</Label>
                       <Input type="number" step="0.1" value={inputs.rf} onChange={e => updateInput('rf', e.target.value)} className="font-mono" />
+                      <span className="text-[10px] text-muted-foreground">Use current 10-year government bond yield (e.g. US: ~4.2 %, Norway: ~3.8 %)</span>
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-xs">Beta</Label>
+                      <Label className="text-xs">Beta — β</Label>
                       <Input type="number" step="0.01" value={inputs.beta} onChange={e => updateInput('beta', e.target.value)} className="font-mono" />
+                      <span className="text-[10px] text-muted-foreground">Volatility vs. market. β=1 moves with market. Beta &gt;1 = higher risk, lower allocation ceiling in master formula.</span>
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-xs">Market Return (Rm %)</Label>
+                      <Label className="text-xs">Expected Market Return — Rm (%)</Label>
                       <Input type="number" step="0.1" value={inputs.rm} onChange={e => updateInput('rm', e.target.value)} className="font-mono" />
+                      <span className="text-[10px] text-muted-foreground">Long-run equity market return. S&amp;P 500 historical avg: ~10 %. Use 9–10 % as default.</span>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <h3 className="font-bold text-sm text-muted-foreground uppercase border-b border-border/50 pb-2">Cost of Debt & Weights</h3>
+                    <h3 className="font-bold text-sm text-muted-foreground uppercase border-b border-border/50 pb-2">Cost of Debt & Capital Weights</h3>
                     <div className="grid gap-2">
-                      <Label className="text-xs">Equity Market Val ($M)</Label>
+                      <Label className="text-xs">Equity Market Value ($M)</Label>
                       <Input type="number" value={inputs.e} onChange={e => updateInput('e', e.target.value)} className="font-mono" />
+                      <span className="text-[10px] text-muted-foreground">Market cap = share price × shares outstanding.</span>
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-xs">Debt Market Val ($M)</Label>
+                      <Label className="text-xs">Debt Market Value ($M)</Label>
                       <Input type="number" value={inputs.d} onChange={e => updateInput('d', e.target.value)} className="font-mono" />
+                      <span className="text-[10px] text-muted-foreground">Total interest-bearing debt. Use book value if market value is unavailable.</span>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label className="text-xs">Cost of Debt (Rd %)</Label>
+                        <Label className="text-xs">Cost of Debt — Rd (%)</Label>
                         <Input type="number" step="0.1" value={inputs.rd} onChange={e => updateInput('rd', e.target.value)} className="font-mono" />
+                        <span className="text-[10px] text-muted-foreground">Weighted avg interest rate on outstanding debt.</span>
                       </div>
                       <div className="grid gap-2">
-                        <Label className="text-xs">Tax Rate (Tc %)</Label>
+                        <Label className="text-xs">Effective Tax Rate — Tc (%)</Label>
                         <Input type="number" step="0.1" value={inputs.tc} onChange={e => updateInput('tc', e.target.value)} className="font-mono" />
+                        <span className="text-[10px] text-muted-foreground">Effective (not statutory) rate from income statement.</span>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="bg-primary/10 border border-primary/30 p-4 rounded-md flex justify-between items-center">
-                  <span className="font-bold tracking-wider text-sm">Calculated WACC</span>
+                  <div>
+                    <span className="font-bold tracking-wider text-sm block">Calculated WACC</span>
+                    <span className="text-[10px] text-muted-foreground">Discount rate applied to all future cash flows</span>
+                  </div>
                   <span className="font-mono text-2xl font-bold text-primary">{wacc.toFixed(2)}%</span>
                 </div>
               </TabsContent>
 
               {/* STEP 2 */}
               <TabsContent value="step2" className="space-y-6 mt-0">
+                <div className="text-xs text-muted-foreground bg-muted/50 border border-border/50 p-3 rounded-md leading-relaxed">
+                  <span className="font-bold text-foreground">Free Cash Flow (FCF)</span> is the cash left after operating costs and capex — the real earnings of the business. We project FCF over 5 years using: <span className="font-mono">FCF_n = Revenue_n × FCFmargin%</span>. Three scenarios (Bear / Base / Bull) stress-test growth rate and WACC simultaneously so you see the valuation range, not a false single number.
+                </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="grid gap-2">
-                    <Label className="text-xs">Base Revenue (Yr 0, $M)</Label>
+                    <Label className="text-xs">Last Twelve Months Revenue — Yr 0 ($M)</Label>
                     <Input type="number" value={inputs.baseRev} onChange={e => updateInput('baseRev', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">Starting point for 5-year projection. Use LTM (last 12 months) revenue from the income statement.</span>
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Revenue Growth Rate (%)</Label>
+                    <Label className="text-xs">Base Revenue Growth Rate (%)</Label>
                     <Input type="number" step="0.1" value={inputs.revGrowth} onChange={e => updateInput('revGrowth', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">Your most realistic annual growth estimate. Cushion and scenario adjustments are applied automatically.</span>
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-xs">FCF Margin (%)</Label>
                     <Input type="number" step="0.1" value={inputs.fcfMargin} onChange={e => updateInput('fcfMargin', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">FCF / Revenue. Use trailing FCF margin. For asset-light SaaS this is often 15–35 %; for capital-intensive businesses 5–15 %.</span>
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-xs">Safety Margin Cushion (%)</Label>
                     <Input type="number" step="0.1" value={inputs.cushion} onChange={e => updateInput('cushion', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">Built-in conservatism. 10 % = base growth is {100-inputs.cushion}% of your entered rate. Recommended: 10–20 %.</span>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
-                  <strong>Cushion logic:</strong> Base scenario applies ({100-inputs.cushion}%) of entered growth. Bull/Bear adjust it further ±15%. WACC adjusts ±0.5% / 1.0%.
+                <div className="text-xs text-muted-foreground bg-muted p-3 rounded space-y-1">
+                  <div><strong className="text-foreground">Scenario stress-test applied automatically:</strong></div>
+                  <div>Bear: growth × {((100 - inputs.cushion - 15) / 100).toFixed(2)} × baseGrowth, WACC +1.0 %</div>
+                  <div>Base: growth × {((100 - inputs.cushion) / 100).toFixed(2)} × baseGrowth, WACC unchanged</div>
+                  <div>Bull: growth × {((100 - inputs.cushion + 15) / 100).toFixed(2)} × baseGrowth, WACC −0.5 %</div>
                 </div>
               </TabsContent>
 
               {/* STEP 3 */}
               <TabsContent value="step3" className="space-y-6 mt-0">
+                <div className="text-xs text-muted-foreground bg-muted/50 border border-border/50 p-3 rounded-md leading-relaxed">
+                  <span className="font-bold text-foreground">Terminal Value</span> captures all the cash flows beyond year 5, and often represents 60–80 % of a company's intrinsic value. Choose the method that best fits the business type.
+                </div>
                 <div className="flex items-center gap-4 border-b border-border/50 pb-4">
                   <Label className="font-bold text-sm uppercase tracking-wider">Method</Label>
                   <select 
@@ -392,24 +418,36 @@ export default function Calculator() {
                     value={inputs.tvMethod}
                     onChange={e => updateInput('tvMethod', e.target.value)}
                   >
-                    <option value="perpetuity">Perpetuity Growth</option>
-                    <option value="ebitda">EBITDA Multiple</option>
+                    <option value="perpetuity">Perpetuity Growth Model</option>
+                    <option value="ebitda">EBITDA Exit Multiple</option>
                   </select>
                 </div>
                 {inputs.tvMethod === 'perpetuity' ? (
-                  <div className="grid gap-2 max-w-xs">
-                    <Label className="text-xs">Long-Term Growth Rate (g %)</Label>
-                    <Input type="number" step="0.1" value={inputs.g} onChange={e => updateInput('g', e.target.value)} className="font-mono" />
+                  <div className="space-y-4">
+                    <div className="grid gap-2 max-w-xs">
+                      <Label className="text-xs">Long-Term Growth Rate — g (%)</Label>
+                      <Input type="number" step="0.1" value={inputs.g} onChange={e => updateInput('g', e.target.value)} className="font-mono" />
+                    </div>
+                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded leading-relaxed">
+                      <strong className="text-foreground">Formula:</strong> TV = FCF_Y5 × (1+g) / (WACC − g). <br/>
+                      g must be below WACC or the model breaks. Use 2–3 % for mature companies (roughly GDP growth). Never use g above the economy's long-run growth rate — that assumption implies the company eventually becomes larger than the entire economy.
+                    </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-6 max-w-md">
-                    <div className="grid gap-2">
-                      <Label className="text-xs">EBITDA Multiple (x)</Label>
-                      <Input type="number" step="0.1" value={inputs.ebitdaMultiple} onChange={e => updateInput('ebitdaMultiple', e.target.value)} className="font-mono" />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-6 max-w-md">
+                      <div className="grid gap-2">
+                        <Label className="text-xs">Exit EBITDA Multiple (x)</Label>
+                        <Input type="number" step="0.1" value={inputs.ebitdaMultiple} onChange={e => updateInput('ebitdaMultiple', e.target.value)} className="font-mono" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs">EBITDA in Year 5 ($M)</Label>
+                        <Input type="number" value={inputs.ebitdaY5} onChange={e => updateInput('ebitdaY5', e.target.value)} className="font-mono" />
+                      </div>
                     </div>
-                    <div className="grid gap-2">
-                      <Label className="text-xs">EBITDA Year 5 ($M)</Label>
-                      <Input type="number" value={inputs.ebitdaY5} onChange={e => updateInput('ebitdaY5', e.target.value)} className="font-mono" />
+                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded leading-relaxed">
+                      <strong className="text-foreground">Formula:</strong> TV = EBITDA_Y5 × Multiple. <br/>
+                      Use the current sector median EV/EBITDA multiple, then apply a 20–30 % discount to that multiple to be conservative. Good for capital-intensive industries or when the perpetuity growth rate feels uncertain.
                     </div>
                   </div>
                 )}
@@ -417,22 +455,29 @@ export default function Calculator() {
 
               {/* STEP 4 */}
               <TabsContent value="step4" className="space-y-6 mt-0">
+                <div className="text-xs text-muted-foreground bg-muted/50 border border-border/50 p-3 rounded-md leading-relaxed">
+                  <span className="font-bold text-foreground">Equity Value per Share</span> = (PV of FCFs + PV of Terminal Value + Cash − Total Debt) ÷ Shares Outstanding. Cash is added back (it's already yours); debt is subtracted (it has a senior claim before equity holders).
+                </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="grid gap-2">
                     <Label className="text-xs">Cash & Equivalents ($M)</Label>
                     <Input type="number" value={inputs.cash} onChange={e => updateInput('cash', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">Cash + short-term investments from the balance sheet. Added to enterprise value to get equity value.</span>
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-xs">Total Debt ($M)</Label>
                     <Input type="number" value={inputs.debtTotal} onChange={e => updateInput('debtTotal', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">All interest-bearing obligations (short + long term). Subtracted — debt holders get paid before equity holders.</span>
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-xs">Shares Outstanding (M)</Label>
                     <Input type="number" step="0.1" value={inputs.shares} onChange={e => updateInput('shares', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">Fully diluted share count including options and convertibles (use diluted shares from the 10-K/annual report).</span>
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-xs">Current Stock Price ($)</Label>
                     <Input type="number" step="0.01" value={inputs.currentPrice} onChange={e => updateInput('currentPrice', e.target.value)} className="font-mono border-primary/50 bg-primary/5" />
+                    <span className="text-[10px] text-muted-foreground">Today's market price. Used to calculate margin of safety vs. DCF intrinsic value.</span>
                   </div>
                 </div>
               </TabsContent>

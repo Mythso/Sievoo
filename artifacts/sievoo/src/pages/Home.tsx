@@ -139,11 +139,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Ad Zone Placeholder */}
-        <div className="w-full bg-card/50 border border-border/50 border-dashed rounded-lg p-4 mb-8 flex items-center justify-center min-h-[90px]">
-          <span className="text-muted-foreground/40 font-mono text-xs tracking-widest">[ ADVERTISEMENT ZONE ]</span>
-        </div>
-
         {analysesLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1,2,3,4,5,6,7,8].map(i => (

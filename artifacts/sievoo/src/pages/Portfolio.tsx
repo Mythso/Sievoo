@@ -126,19 +126,38 @@ export default function Portfolio() {
       </div>
 
       <Card className="bg-card border-border shadow-xl">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 bg-muted/20">
-          <div>
-            <CardTitle className="text-xl font-bold">Holdings & Rebalancing</CardTitle>
-            <CardDescription>Input actual weights vs formula targets.</CardDescription>
+        <CardHeader className="border-b border-border/50 bg-muted/20">
+          <CardTitle className="text-xl font-bold">Holdings & Rebalancing</CardTitle>
+          <CardDescription>Log your current exposure and the formula target for each name. The directive tells you what to do next.</CardDescription>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-xs">
+            <div className="bg-background/60 border border-border rounded-md p-3 space-y-1">
+              <div className="font-bold text-foreground uppercase tracking-widest text-[10px]">Actual Wt %</div>
+              <p className="text-muted-foreground leading-relaxed">What percentage of your total investable portfolio is currently in this position right now. Example: if you own $10 000 in AAPL and your portfolio is $100 000, enter 10.</p>
+            </div>
+            <div className="bg-background/60 border border-border rounded-md p-3 space-y-1">
+              <div className="font-bold text-foreground uppercase tracking-widest text-[10px]">Target Wt %</div>
+              <p className="text-muted-foreground leading-relaxed">The ideal allocation produced by the Sievoo master formula — W_final = Gates × max(5 %, min(10 %, score/Beta × 0.22)). Run the Valuation Engine on each stock to get this number, then paste it here.</p>
+            </div>
           </div>
-          </CardHeader>
+          <div className="flex flex-wrap gap-3 mt-3 text-xs">
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-accent inline-block"></span><span className="text-muted-foreground">HOLD + ADD — below target, add on dips</span></span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block"></span><span className="text-muted-foreground">HOLD + TRIM — above target, shave 10–20 %</span></span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground inline-block"></span><span className="text-muted-foreground">ON TARGET — within ±1 % of target</span></span>
+          </div>
+        </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="font-mono text-xs uppercase">Ticker</TableHead>
-                <TableHead className="font-mono text-xs uppercase text-right">Actual Wt %</TableHead>
-                <TableHead className="font-mono text-xs uppercase text-right">Target Wt %</TableHead>
+                <TableHead className="font-mono text-xs uppercase text-right">
+                  <div>Actual Wt %</div>
+                  <div className="text-[10px] normal-case font-normal text-muted-foreground/70">Your current %</div>
+                </TableHead>
+                <TableHead className="font-mono text-xs uppercase text-right">
+                  <div>Target Wt %</div>
+                  <div className="text-[10px] normal-case font-normal text-muted-foreground/70">Formula W_final</div>
+                </TableHead>
                 <TableHead className="font-mono text-xs uppercase text-right">Current $</TableHead>
                 <TableHead className="font-mono text-xs uppercase text-right">52W High $</TableHead>
                 <TableHead className="font-mono text-xs uppercase text-center">Directive</TableHead>

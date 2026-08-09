@@ -14,7 +14,6 @@ export function Footer() {
           <Link href="/terms" className="hover:text-foreground transition-colors" data-testid="link-terms">Terms</Link>
           <Link href="/about" className="hover:text-foreground transition-colors" data-testid="link-about">About</Link>
           <Link href="/disclaimer" className="hover:text-foreground transition-colors" data-testid="link-disclaimer">Disclaimer</Link>
-          <Link href="/admin" className="hover:text-foreground transition-colors text-xs opacity-50 ml-4" data-testid="link-admin">Admin</Link>
         </div>
       </div>
       <div className="container mx-auto max-w-4xl px-4 mt-8 text-center">

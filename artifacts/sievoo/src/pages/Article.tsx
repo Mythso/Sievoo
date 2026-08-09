@@ -102,11 +102,7 @@ export default function Article() {
           
           {article.body.map((block, idx) => {
             if (block === '[AD_ZONE]') {
-              return (
-                <div key={idx} className="w-full bg-background/50 border border-border/50 border-dashed rounded-lg p-6 my-10 flex items-center justify-center min-h-[120px]">
-                  <span className="text-muted-foreground/40 font-mono text-xs tracking-widest">[ ADVERTISEMENT ZONE ]</span>
-                </div>
-              );
+              return null;
             }
             return <div key={idx} dangerouslySetInnerHTML={{ __html: block }} />;
           })}
