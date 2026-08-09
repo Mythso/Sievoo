@@ -3,13 +3,22 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Sievoo API — Investment analysis community and DCF valuation platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: analyses
+    description: Published investment analyses
+  - name: comments
+    description: Comments on analyses
+  - name: contact
+    description: Contact form
+  - name: admin
+    description: Admin console
+
 paths:
   /healthz:
     get:
@@ -24,6 +33,335 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /analyses:
+    get:
+      operationId: listAnalyses
+      tags: [analyses]
+      summary: List published analyses
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, most_liked, margin_of_safety]
+            default: newest
+        - name: ticker
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: number
+            default: 0
+      responses:
+        "200":
+          description: List of analyses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisList"
+    post:
+      operationId: createAnalysis
+      tags: [analyses]
+      summary: Publish a new analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+
+  /analyses/stats:
+    get:
+      operationId: getCommunityStats
+      tags: [analyses]
+      summary: Community statistics
+      responses:
+        "200":
+          description: Community stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityStats"
+
+  /analyses/{id}:
+    get:
+      operationId: getAnalysis
+      tags: [analyses]
+      summary: Get a single analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateAnalysis
+      tags: [analyses]
+      summary: Edit an analysis (requires PIN)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "403":
+          description: Wrong PIN
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteAnalysis
+      tags: [analyses]
+      summary: Delete an analysis (requires PIN)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PinVerify"
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Wrong PIN
+
+  /analyses/{id}/like:
+    post:
+      operationId: likeAnalysis
+      tags: [analyses]
+      summary: Like an analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Updated like count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LikeResult"
+
+  /analyses/{id}/comments:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: List comments for an analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentList"
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Add a comment to an analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [contact]
+      summary: Submit a contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Message received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactResult"
+
+  /admin/auth:
+    post:
+      operationId: adminAuth
+      tags: [admin]
+      summary: Authenticate as admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminAuthInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuthResult"
+        "401":
+          description: Unauthorized
+
+  /admin/messages:
+    get:
+      operationId: listAdminMessages
+      tags: [admin]
+      summary: List contact messages (admin)
+      parameters:
+        - name: x-admin-token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMessageList"
+        "401":
+          description: Unauthorized
+
+  /admin/messages/{id}:
+    patch:
+      operationId: updateAdminMessage
+      tags: [admin]
+      summary: Mark message read/unread or update status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: x-admin-token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminMessageUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMessage"
+    delete:
+      operationId: deleteAdminMessage
+      tags: [admin]
+      summary: Delete a contact message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: x-admin-token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/password:
+    put:
+      operationId: updateAdminPassword
+      tags: [admin]
+      summary: Update admin password
+      parameters:
+        - name: x-admin-token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminPasswordUpdate"
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuthResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +372,234 @@ components:
       required:
         - status
 
+    Analysis:
+      type: object
+      required: [id, title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, likes_count, created_at, author_alias, full_inputs_json]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        ticker:
+          type: string
+        current_price:
+          type: number
+        base_dcf:
+          type: number
+        bear_dcf:
+          type: number
+        bull_dcf:
+          type: number
+        margin_of_safety:
+          type: number
+        user_notes:
+          type: ["string", "null"]
+        full_inputs_json:
+          type: string
+        likes_count:
+          type: number
+        created_at:
+          type: string
+        author_alias:
+          type: string
+        has_edit_pin:
+          type: boolean
+
+    AnalysisList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Analysis"
+        total:
+          type: number
+
+    AnalysisInput:
+      type: object
+      required: [title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, full_inputs_json, author_alias]
+      properties:
+        title:
+          type: string
+        ticker:
+          type: string
+        current_price:
+          type: number
+        base_dcf:
+          type: number
+        bear_dcf:
+          type: number
+        bull_dcf:
+          type: number
+        margin_of_safety:
+          type: number
+        user_notes:
+          type: string
+        full_inputs_json:
+          type: string
+        author_alias:
+          type: string
+        edit_pin:
+          type: ["string", "null"]
+
+    AnalysisUpdate:
+      type: object
+      required: [pin]
+      properties:
+        pin:
+          type: string
+        title:
+          type: ["string", "null"]
+        user_notes:
+          type: ["string", "null"]
+        full_inputs_json:
+          type: ["string", "null"]
+        current_price:
+          type: ["number", "null"]
+        base_dcf:
+          type: ["number", "null"]
+        bear_dcf:
+          type: ["number", "null"]
+        bull_dcf:
+          type: ["number", "null"]
+        margin_of_safety:
+          type: ["number", "null"]
+
+    PinVerify:
+      type: object
+      required: [pin]
+      properties:
+        pin:
+          type: string
+
+    LikeResult:
+      type: object
+      required: [likes_count]
+      properties:
+        likes_count:
+          type: number
+
+    CommunityStats:
+      type: object
+      required: [total_analyses, total_likes, top_tickers]
+      properties:
+        total_analyses:
+          type: number
+        total_likes:
+          type: number
+        top_tickers:
+          type: array
+          items:
+            $ref: "#/components/schemas/TickerStat"
+
+    TickerStat:
+      type: object
+      required: [ticker, count]
+      properties:
+        ticker:
+          type: string
+        count:
+          type: number
+
+    Comment:
+      type: object
+      required: [id, analysis_id, author_name, comment_text, created_at]
+      properties:
+        id:
+          type: number
+        analysis_id:
+          type: number
+        author_name:
+          type: string
+        comment_text:
+          type: string
+        created_at:
+          type: string
+
+    CommentList:
+      type: array
+      items:
+        $ref: "#/components/schemas/Comment"
+
+    CommentInput:
+      type: object
+      required: [author_name, comment_text]
+      properties:
+        author_name:
+          type: string
+        comment_text:
+          type: string
+
+    ContactInput:
+      type: object
+      required: [name, email, subject, message]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        subject:
+          type: string
+        message:
+          type: string
+
+    ContactResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    AdminAuthInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    AdminAuthResult:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    AdminMessage:
+      type: object
+      required: [id, name, email, subject, message, created_at, read_status]
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        email:
+          type: string
+        subject:
+          type: string
+        message:
+          type: string
+        created_at:
+          type: string
+        read_status:
+          type: boolean
+
+    AdminMessageList:
+      type: array
+      items:
+        $ref: "#/components/schemas/AdminMessage"
+
+    AdminMessageUpdate:
+      type: object
+      properties:
+        read_status:
+          type: ["boolean", "null"]
+
+    AdminPasswordUpdate:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string

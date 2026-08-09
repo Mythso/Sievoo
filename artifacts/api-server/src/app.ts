@@ -29,6 +29,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Google AdSense ads.txt endpoint
+app.get("/ads.txt", (_req, res) => {
+  res.type("text/plain").send("# Sievoo.com - Google AdSense ads.txt\n# Add your AdSense publisher ID below\n# google.com, pub-XXXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0\n");
+});
+
 app.use("/api", router);
 
 export default app;

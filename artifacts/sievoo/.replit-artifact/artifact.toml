@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Sievoo"
+description = "Sievoo.com — an intelligent quality sieve and valuation engine for investors. Features DCF valuation, portfolio allocation formula, FIRE/pension calculator, public investment community feed, educational academy, and admin console. Dark-mode fintech aesthetic with Norwegian/English localization."
+version = "1.0.0"
+id = "artifacts/sievoo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24742
+
+[services.development]
+run = "pnpm --filter @workspace/sievoo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sievoo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sievoo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24742"
+BASE_PATH = "/"
