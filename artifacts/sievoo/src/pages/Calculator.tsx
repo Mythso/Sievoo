@@ -46,7 +46,7 @@ export default function Calculator() {
   const [inputs, setInputs] = useState<CalcInputs>(DEFAULT_INPUTS);
   
   const [gates, setGates] = useState({
-    noBs: false, moat: false, ceo: false, dcfBear: false
+    moat: false, ceo: false
   });
   
   const [scores, setScores] = useState({ insider: 50, thesis: 50 });
@@ -64,7 +64,7 @@ export default function Calculator() {
       try {
         const parsed = JSON.parse(forkedData.full_inputs_json);
         if (parsed.inputs) setInputs(parsed.inputs);
-        if (parsed.gates) setGates(parsed.gates);
+        if (parsed.gates) setGates({ moat: !!parsed.gates.moat, ceo: !!parsed.gates.ceo });
         if (parsed.scores) setScores(parsed.scores);
         hydratedRef.current = true;
         toast({ title: "Fork loaded", description: `Loaded analysis for ${forkedData.ticker}` });
@@ -132,6 +132,16 @@ export default function Calculator() {
     };
   }, [inputs, wacc]);
 
+  // Auto-computed gates
+  const noBsConditions = [
+    inputs.revGrowth > 0,
+    inputs.fcfMargin > 0,
+    inputs.cash > inputs.debtTotal,
+  ];
+  const noBsScore = noBsConditions.filter(Boolean).length;
+  const noBsAuto = noBsScore >= 2;
+  const dcfBearAuto = inputs.currentPrice > 0 && inputs.currentPrice < scenarios.bear.vDcf;
+
   // Master Formula
   const sRule40_val = inputs.revGrowth + inputs.fcfMargin;
   const sRule40 = sRule40_val >= 100 ? 100 : sRule40_val >= 40 ? 60 : 0;
@@ -139,7 +149,7 @@ export default function Calculator() {
   const upside = inputs.currentPrice > 0 ? ((scenarios.base.vDcf - inputs.currentPrice) / inputs.currentPrice) * 100 : 0;
   const sDcfBase = Math.max(0, Math.min(100, upside));
 
-  const allGatesPass = gates.noBs && gates.moat && gates.ceo && gates.dcfBear;
+  const allGatesPass = noBsAuto && dcfBearAuto && gates.moat && gates.ceo;
   
   let wFinalRaw = 0;
   if (allGatesPass && inputs.beta > 0) {
@@ -302,11 +312,17 @@ export default function Calculator() {
         </div>
 
         <Tabs defaultValue="step1" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-muted/50 border border-border">
+          <TabsList className="grid w-full grid-cols-5 bg-muted/50 border border-border">
             <TabsTrigger value="step1" className="font-mono text-xs uppercase tracking-wider">1. WACC</TabsTrigger>
             <TabsTrigger value="step2" className="font-mono text-xs uppercase tracking-wider">2. FCF</TabsTrigger>
             <TabsTrigger value="step3" className="font-mono text-xs uppercase tracking-wider">3. Term.Val</TabsTrigger>
             <TabsTrigger value="step4" className="font-mono text-xs uppercase tracking-wider">4. Equity</TabsTrigger>
+            <TabsTrigger value="step5" className="font-mono text-xs uppercase tracking-wider flex items-center gap-1">
+              5. Gates
+              {allGatesPass
+                ? <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
+                : <span className="w-1.5 h-1.5 rounded-full bg-destructive inline-block" />}
+            </TabsTrigger>
           </TabsList>
           
           <Card className="mt-4 bg-card border-border shadow-lg">
@@ -482,84 +498,175 @@ export default function Calculator() {
                 </div>
               </TabsContent>
 
+              {/* STEP 5 — Quality Gates */}
+              <TabsContent value="step5" className="space-y-6 mt-0">
+                <div className="text-xs text-muted-foreground bg-muted/50 border border-border/50 p-3 rounded-md leading-relaxed">
+                  <span className="font-bold text-foreground">Quality Gates</span> are binary pass/fail filters. All 4 must pass — a single failure forces W_final to 0 % regardless of how attractive the DCF looks. Two gates are checked automatically from your inputs; two require your own research.
+                </div>
+
+                {/* AUTO gates */}
+                <div className="space-y-2">
+                  <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-widest pb-1 border-b border-border/40">Auto-detected from your inputs</h3>
+
+                  {/* No BS Rule */}
+                  <div className={`flex items-start gap-4 p-4 border rounded-md ${noBsAuto ? 'border-accent/40 bg-accent/5' : 'border-destructive/40 bg-destructive/5'}`}>
+                    <div className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${noBsAuto ? 'bg-accent text-accent-foreground' : 'bg-destructive text-destructive-foreground'}`}>
+                      {noBsAuto ? '✓' : '✗'}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="font-bold text-sm">No BS Rule <span className="text-[10px] font-normal text-muted-foreground ml-2">auto-checked · 2 of 3 conditions needed</span></div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className={`flex items-center gap-1.5 p-2 rounded border ${inputs.revGrowth > 0 ? 'border-accent/30 bg-accent/10 text-accent' : 'border-destructive/30 bg-destructive/10 text-destructive'}`}>
+                          <span>{inputs.revGrowth > 0 ? '✓' : '✗'}</span>
+                          <span>Rev growth {'>'} 0 % <span className="opacity-70">({inputs.revGrowth.toFixed(1)} %)</span></span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 p-2 rounded border ${inputs.fcfMargin > 0 ? 'border-accent/30 bg-accent/10 text-accent' : 'border-destructive/30 bg-destructive/10 text-destructive'}`}>
+                          <span>{inputs.fcfMargin > 0 ? '✓' : '✗'}</span>
+                          <span>FCF margin {'>'} 0 % <span className="opacity-70">({inputs.fcfMargin.toFixed(1)} %)</span></span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 p-2 rounded border ${inputs.cash > inputs.debtTotal ? 'border-accent/30 bg-accent/10 text-accent' : 'border-destructive/30 bg-destructive/10 text-destructive'}`}>
+                          <span>{inputs.cash > inputs.debtTotal ? '✓' : '✗'}</span>
+                          <span>Cash {'>'} Debt <span className="opacity-70">({inputs.cash.toFixed(0)} vs {inputs.debtTotal.toFixed(0)})</span></span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Screens out companies burning cash with no path to profitability. Positive revenue growth means the business is actually growing. Positive FCF means the business generates real cash after all capital investments — not just accounting profit. Cash {'>'} Debt means the balance sheet is sturdy enough to survive a downturn without forced dilution. Enter the numbers in Steps 2 and 4 and this gate updates automatically.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Downside Protection */}
+                  <div className={`flex items-start gap-4 p-4 border rounded-md ${dcfBearAuto ? 'border-accent/40 bg-accent/5' : 'border-destructive/40 bg-destructive/5'}`}>
+                    <div className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${dcfBearAuto ? 'bg-accent text-accent-foreground' : 'bg-destructive text-destructive-foreground'}`}>
+                      {dcfBearAuto ? '✓' : '✗'}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="font-bold text-sm">Downside Protection <span className="text-[10px] font-normal text-muted-foreground ml-2">auto-checked</span></div>
+                      <div className="font-mono text-xs text-muted-foreground">
+                        Current price <span className={inputs.currentPrice < scenarios.bear.vDcf ? 'text-accent font-bold' : 'text-destructive font-bold'}>${inputs.currentPrice.toFixed(2)}</span> vs Bear DCF <span className="text-foreground font-bold">${scenarios.bear.vDcf.toFixed(2)}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        The Bear scenario already applies a growth haircut and a higher discount rate (WACC +1 %). If the stock is still expensive even in that pessimistic case, you have no margin of safety. You need to be able to lose the bear-case argument and still not lose money. Enter the current price in Step 4 and this updates live.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MANUAL gates */}
+                <div className="space-y-2">
+                  <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-widest pb-1 border-b border-border/40">Requires your research — toggle when confirmed</h3>
+
+                  {/* Moat */}
+                  <div className={`flex items-start gap-4 p-4 border rounded-md transition-colors hover:bg-muted/20 ${gates.moat ? 'border-accent/40 bg-accent/5' : 'border-border'}`}>
+                    <Switch checked={gates.moat} onCheckedChange={c => setGates(p => ({...p, moat: c}))} id="g-moat" className="mt-0.5" />
+                    <div className="space-y-2">
+                      <Label htmlFor="g-moat" className="font-bold text-sm cursor-pointer">Identifiable Moat</Label>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        A moat is a structural, durable competitive advantage that prevents rivals from taking market share even when they try hard. It must be <em>identifiable</em> — you should be able to name it precisely, not just say "they have a great brand."
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="bg-muted/50 border border-border/50 rounded p-2 space-y-0.5">
+                          <div className="font-bold text-foreground">Network Effects</div>
+                          <div className="text-muted-foreground">Product gets better as more people use it. Every new user adds value for existing users (Visa, Meta, Airbnb). Hard to replicate once critical mass is reached.</div>
+                        </div>
+                        <div className="bg-muted/50 border border-border/50 rounded p-2 space-y-0.5">
+                          <div className="font-bold text-foreground">Switching Costs</div>
+                          <div className="text-muted-foreground">Painful or expensive to leave (ERP systems, payroll software, cloud infrastructure). Customers stay not because they love you but because leaving is worse.</div>
+                        </div>
+                        <div className="bg-muted/50 border border-border/50 rounded p-2 space-y-0.5">
+                          <div className="font-bold text-foreground">Cost Advantage</div>
+                          <div className="text-muted-foreground">Can produce or distribute at lower cost than any competitor — at scale (Amazon logistics, TSMC fabs, Costco buying power). Not just "they're cheap."</div>
+                        </div>
+                        <div className="bg-muted/50 border border-border/50 rounded p-2 space-y-0.5">
+                          <div className="font-bold text-foreground">Intangible Assets</div>
+                          <div className="text-muted-foreground">Patents, regulatory licences, proprietary data, or a brand that lets the company charge a premium (not just recognition). Check: are gross margins stable or expanding?</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                        <strong className="text-foreground">Confirmation test:</strong> Look at gross margin trend over 5 years. A real moat defends or expands margins — a fake moat erodes them as competition intensifies. Also check return on invested capital (ROIC) vs WACC: sustained ROIC {'>'} WACC = economic moat.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skin In The Game */}
+                  <div className={`flex items-start gap-4 p-4 border rounded-md transition-colors hover:bg-muted/20 ${gates.ceo ? 'border-accent/40 bg-accent/5' : 'border-border'}`}>
+                    <Switch checked={gates.ceo} onCheckedChange={c => setGates(p => ({...p, ceo: c}))} id="g-ceo" className="mt-0.5" />
+                    <div className="space-y-2">
+                      <Label htmlFor="g-ceo" className="font-bold text-sm cursor-pointer">Skin In The Game</Label>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Management must have meaningful personal financial exposure to the stock — ideally through open-market purchases of their own money, not just option grants. This aligns incentives: if the CEO is buying with their own cash, they believe the stock is cheap.
+                      </p>
+                      <div className="bg-muted/50 border border-border/50 rounded p-3 text-xs space-y-2">
+                        <div className="font-bold text-foreground">How to check (US-listed companies):</div>
+                        <ul className="space-y-1.5 text-muted-foreground list-none">
+                          <li className="flex gap-2"><span className="text-primary shrink-0">→</span><span><strong className="text-foreground">SEC Form 4</strong> — filed within 2 business days of any insider transaction. Search on <span className="font-mono">sec.gov/cgi-bin/browse-edgar</span> or <span className="font-mono">openinsider.com</span>. Filter for "P" (open-market purchase), not "A" (option award).</span></li>
+                          <li className="flex gap-2"><span className="text-primary shrink-0">→</span><span><strong className="text-foreground">$100 000+ threshold</strong> — single open-market purchase of $100 k or more in a short period is a meaningful signal. Insiders with that size buy in clusters tend to precede significant price moves (academic research: Jeng, Metrick &amp; Zeckhauser). Smaller amounts could be automatic purchase plans (10b5-1) with no informational value.</span></li>
+                          <li className="flex gap-2"><span className="text-primary shrink-0">→</span><span><strong className="text-foreground">Cluster buying</strong> — multiple insiders (CEO + CFO + board members) all buying in the same window is a much stronger signal than one individual.</span></li>
+                          <li className="flex gap-2"><span className="text-primary shrink-0">→</span><span><strong className="text-foreground">Founder-led</strong> — founder still running the company with {'>'} 5 % ownership passes this gate by default. They are already maximally aligned.</span></li>
+                          <li className="flex gap-2"><span className="text-primary shrink-0">→</span><span><strong className="text-foreground">Red flag</strong> — heavy insider selling (Form 4 "S" transactions) at current price levels is a negative signal even if the DCF looks attractive. Insiders know things.</span></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status banner */}
+                {allGatesPass ? (
+                  <div className="p-4 border border-accent/50 bg-accent/10 rounded-md flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-accent shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-accent text-sm uppercase">All Gates Pass — Proceed to Scoring</h4>
+                      <p className="text-xs text-accent/80 mt-1">The qualitative scores below feed into the master formula allocation weight.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-md flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-destructive text-sm uppercase">Exclusion Triggered</h4>
+                      <p className="text-xs text-destructive/80 mt-1">One or more gates fail. Final target allocation is locked to 0 %. Exit the position or do not enter. Fix the inputs or research and re-evaluate.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Qualitative Scoring — only shown when all gates pass */}
+                {allGatesPass && (
+                  <div className="space-y-6 pt-2 border-t border-border/50">
+                    <div className="text-xs text-muted-foreground leading-relaxed">
+                      <span className="font-bold text-foreground">Qualitative scores</span> adjust the allocation weight within the 5–10 % band. They reward strong insider conviction and contrarian situations where the market has fundamentally misunderstood the thesis.
+                    </div>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <Label className="font-bold">Insider Conviction</Label>
+                          <span className="font-mono text-muted-foreground">{scores.insider} / 100</span>
+                        </div>
+                        <Slider value={[scores.insider]} max={100} step={1} onValueChange={(v) => setScores(p => ({...p, insider: v[0]}))} />
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
+                          <span>0 — Heavy insider selling</span>
+                          <span>50 — Neutral / option grants only</span>
+                          <span>100 — Aggressive open-market buying $100k+</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <Label className="font-bold">Market Misunderstanding</Label>
+                          <span className="font-mono text-muted-foreground">{scores.thesis} / 100</span>
+                        </div>
+                        <Slider value={[scores.thesis]} max={100} step={1} onValueChange={(v) => setScores(p => ({...p, thesis: v[0]}))} />
+                        <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
+                          <span>0 — Street consensus, no edge</span>
+                          <span>100 — Deeply misunderstood catalyst</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
             </CardContent>
           </Card>
         </Tabs>
-
-        {/* Quality Gates */}
-        <Card className="bg-card border-border shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold tracking-tight">Quality Gates</CardTitle>
-            <CardDescription>All 4 must pass. A single failure drops target allocation to 0%.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-4 p-3 border border-border rounded-md hover:bg-muted/30 transition-colors">
-              <Switch checked={gates.noBs} onCheckedChange={c => setGates(p => ({...p, noBs: c}))} id="g-nobs" />
-              <div className="grid gap-1">
-                <Label htmlFor="g-nobs" className="font-bold cursor-pointer text-sm">No BS Rule</Label>
-                <span className="text-xs text-muted-foreground">Pos rev growth, pos FCF, Cash {'>'} Debt (2/3 needed).</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-3 border border-border rounded-md hover:bg-muted/30 transition-colors">
-              <Switch checked={gates.moat} onCheckedChange={c => setGates(p => ({...p, moat: c}))} id="g-moat" />
-              <div className="grid gap-1">
-                <Label htmlFor="g-moat" className="font-bold cursor-pointer text-sm">Identifiable Moat</Label>
-                <span className="text-xs text-muted-foreground">Network effects, switching costs, cost adv, intangibles. Stable margins.</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-3 border border-border rounded-md hover:bg-muted/30 transition-colors">
-              <Switch checked={gates.ceo} onCheckedChange={c => setGates(p => ({...p, ceo: c}))} id="g-ceo" />
-              <div className="grid gap-1">
-                <Label htmlFor="g-ceo" className="font-bold cursor-pointer text-sm">Skin In The Game</Label>
-                <span className="text-xs text-muted-foreground">Founder led, massive insider ownership, or open market buying.</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-3 border border-border rounded-md hover:bg-muted/30 transition-colors">
-              <Switch checked={gates.dcfBear} onCheckedChange={c => setGates(p => ({...p, dcfBear: c}))} id="g-bear" />
-              <div className="grid gap-1">
-                <Label htmlFor="g-bear" className="font-bold cursor-pointer text-sm">Downside Protection</Label>
-                <span className="text-xs text-muted-foreground">Current Price ${inputs.currentPrice} {"<"} Bear DCF ${scenarios.bear.vDcf.toFixed(2)}.</span>
-              </div>
-            </div>
-
-            {!allGatesPass && (
-              <div className="mt-4 p-4 border border-destructive/50 bg-destructive/10 rounded-md flex items-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
-                <div>
-                  <h4 className="font-bold text-destructive text-sm uppercase">Exclusion Triggered</h4>
-                  <p className="text-xs text-destructive/80 mt-1">Stock fails quality standards. Exit position or do not enter. Final target allocation restricted to 0%.</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Scoring */}
-        {allGatesPass && (
-          <Card className="bg-card border-border shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold tracking-tight">Qualitative Scoring</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-3">
-                <div className="flex justify-between items-center text-sm">
-                  <Label className="font-bold">Insider Conviction</Label>
-                  <span className="font-mono text-muted-foreground">{scores.insider} pts</span>
-                </div>
-                <Slider value={[scores.insider]} max={100} step={1} onValueChange={(v) => setScores(p => ({...p, insider: v[0]}))} />
-                <span className="text-[10px] text-muted-foreground uppercase">0 = Heavy Selling, 50 = Neutral, 100 = Aggressive Open Market Buying</span>
-              </div>
-              <div className="grid gap-3">
-                <div className="flex justify-between items-center text-sm">
-                  <Label className="font-bold">Market Misunderstanding</Label>
-                  <span className="font-mono text-muted-foreground">{scores.thesis} pts</span>
-                </div>
-                <Slider value={[scores.thesis]} max={100} step={1} onValueChange={(v) => setScores(p => ({...p, thesis: v[0]}))} />
-                <span className="text-[10px] text-muted-foreground uppercase">0 = Consensus, 100 = Deeply misunderstood catalyst</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* RIGHT COL: OUTPUTS */}
