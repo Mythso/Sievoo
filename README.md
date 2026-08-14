@@ -1,0 +1,220 @@
+# Sievoo — The Intelligent Quality Sieve for Investors
+
+> **DCF valuation engine · Portfolio allocation formula · FIRE calculator · Investment community feed · Educational academy**
+
+Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven investors. It stress-tests stocks through a rigorous DCF methodology, applies a master allocation formula, and hosts a public community where investors share fully transparent analyses — no narratives, only math.
+
+---
+
+## Features
+
+### Valuation Engine (DCF Calculator)
+- 5-step tabbed workflow: WACC → FCF projections → Terminal Value → Equity per share → Quality Gates
+- **CAPM/WACC** computation with real-time output
+- **Three scenarios** (Bear / Base / Bull) computed simultaneously — growth haircut + WACC stress applied automatically
+- **Terminal value** via Perpetuity Growth Model or EBITDA Exit Multiple
+- **4 Quality Gates** — two auto-detected from inputs, two require research:
+  - *No BS Rule* (auto): positive rev growth, positive FCF margin, cash > debt (2/3 needed)
+  - *Downside Protection* (auto): current price < Bear DCF
+  - *Identifiable Moat* (manual): network effects, switching costs, cost advantage, intangibles
+  - *Skin In The Game* (manual): founder-led or meaningful open-market insider buying ($100k+ threshold)
+- **Master Formula**: `W_final = Gates × max(5%, min(10%, score / Beta × 0.22))`
+- Directives: `HOLD + ADD` / `HOLD + TRIM` / `ON TARGET` / `EXCLUSION / EXIT`
+- HTML5 Canvas share card export (PNG)
+- Save/load analyses as JSON, publish to community feed
+
+### Community Feed
+- Browse published analyses sorted by newest / most liked / highest margin of safety
+- Ticker search, like analyses, post comments
+- Fork any analysis directly into the calculator
+
+### Portfolio Dashboard
+- Holdings table: Actual Wt % vs Target Wt % (W_final from the formula)
+- Live directives per position
+- Double-Down Opportunities: HOLD+ADD positions 20%+ below 52W high → 3× DCA protocol
+- Dry powder tracking, Sunday Rebalance Protocol
+- Export to JSON
+
+### FIRE Calculator
+- 25× expenses rule, 4% withdrawal simulation
+- Rule of 110 asset allocation
+- Gap-to-target and estimated completion year
+
+### Academy
+- Four SEO-optimised educational articles: DCF Fundamentals, Core-Satellite Strategy, The 4% Rule, Moats & Rule of 40
+
+### Admin Console
+- Password-protected at `/admin` (not linked anywhere in the UI)
+- Manage contact form inbox, change admin password
+- SHA-256 + salt hashing, session token stored in DB
+
+### Internationalisation
+- EN / NO language toggle, stored in `localStorage`
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 19, Vite 7, TypeScript 5.9 |
+| **Styling** | Tailwind CSS v4, shadcn/ui (Radix UI) |
+| **Routing** | Wouter |
+| **Data fetching** | TanStack React Query |
+| **Backend** | Express 5, Node.js 24, TypeScript |
+| **Database** | PostgreSQL (Drizzle ORM) |
+| **Validation** | Zod v4 |
+| **API contract** | OpenAPI 3.1 spec → Orval codegen (hooks + Zod schemas) |
+| **Logger** | Pino + pino-http |
+| **Package manager** | pnpm workspaces (monorepo) |
+
+---
+
+## Monorepo Structure
+
+```
+/
+├── artifacts/
+│   ├── sievoo/              # React frontend  (@workspace/sievoo)
+│   │   ├── src/
+│   │   │   ├── pages/       # Home, Calculator, FIRE, Portfolio, Academy, Admin, Contact …
+│   │   │   ├── components/  # SievooLogo, AnalysisCard, Navbar, Footer …
+│   │   │   └── hooks/
+│   │   └── index.html       # Google Analytics tag lives here
+│   ├── api-server/          # Express API     (@workspace/api-server)
+│   │   └── src/
+│   │       └── routes/      # analyses, comments, contact, admin
+│   └── mockup-sandbox/      # Internal component preview server
+├── lib/
+│   ├── api-spec/            # openapi.yaml  ← single source of truth for all API contracts
+│   ├── api-client-react/    # Orval-generated React Query hooks (do not edit manually)
+│   ├── api-zod/             # Orval-generated Zod schemas   (do not edit manually)
+│   └── db/                  # Drizzle ORM schema + connection
+│       └── src/schema/
+│           ├── analyses.ts
+│           ├── comments.ts
+│           ├── contact_messages.ts
+│           └── admin_config.ts
+├── scripts/                 # Post-merge setup scripts
+├── package.json             # Monorepo root
+├── pnpm-workspace.yaml
+└── tsconfig.base.json
+```
+
+---
+
+## Brand & Design
+
+| Token | Value | Use |
+|---|---|---|
+| Background | `#0b0f19` | Deep charcoal base |
+| Card | `#1e293b` | Dark slate surfaces |
+| Primary / Gold | `#f59e0b` | CTA, highlights |
+| Accent / Emerald | `#10b981` | Positive signals, HOLD+ADD |
+| Destructive / Rose | `#f43f5e` | Warnings, EXCLUSION |
+
+Dark mode only, monospace font for all financial figures.
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 24+
+- pnpm 9+
+- PostgreSQL database (connection string in `DATABASE_URL`)
+
+### Install
+
+```bash
+git clone https://github.com/your-org/sievoo.git
+cd sievoo
+pnpm install
+```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `SESSION_SECRET` | ✅ | Secret for session signing |
+| `NODE_ENV` | — | `development` \| `production` |
+| `PORT` | — | Port for each artifact (assigned automatically on Replit) |
+
+### Database Setup
+
+```bash
+pnpm --filter @workspace/db run push
+```
+
+### Run in Development
+
+```bash
+# Frontend (http://localhost:<PORT>)
+pnpm --filter @workspace/sievoo run dev
+
+# API server (http://localhost:8080)
+pnpm --filter @workspace/api-server run dev
+```
+
+### Build
+
+```bash
+pnpm run build   # typecheck + build all packages
+```
+
+### Regenerate API Client (after openapi.yaml changes)
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+```
+
+---
+
+## API Overview
+
+All routes are prefixed with `/api`.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/analyses` | List community analyses (sort, search, pagination) |
+| `POST` | `/api/analyses` | Publish a new analysis |
+| `GET` | `/api/analyses/:id` | Get single analysis |
+| `POST` | `/api/analyses/:id/like` | Like an analysis |
+| `GET` | `/api/analyses/stats` | Community statistics |
+| `GET` | `/api/analyses/:id/comments` | List comments |
+| `POST` | `/api/analyses/:id/comments` | Post a comment |
+| `POST` | `/api/contact` | Submit contact form (rate-limited: 5 req/hr per IP) |
+| `POST` | `/api/admin/auth` | Admin login (rate-limited: 10 attempts/15 min) |
+| `GET` | `/api/admin/messages` | List contact messages (auth required) |
+| `PATCH` | `/api/admin/messages/:id` | Mark message read (auth required) |
+| `POST` | `/api/admin/change-password` | Change admin password (auth required) |
+| `GET` | `/ads.txt` | Google AdSense ads.txt |
+
+Admin endpoints require `x-admin-token` header. Default admin password on first run: `AdminPass123!` — **change immediately after deployment.**
+
+---
+
+## Key Architecture Decisions
+
+- **All DCF math is client-side.** The API only handles persistence (community feed, admin, contact). No server round-trips for calculations.
+- **Contract-first API.** `lib/api-spec/openapi.yaml` is the single source of truth. Always edit the spec first, then run codegen before touching frontend or backend code.
+- **`type: number` in OpenAPI spec**, not `type: integer` — Orval generates `zod.int()` for integers which does not exist in Zod v3/v4.
+- **In-memory rate limiting** (per process). Suitable for single-instance deployment; swap for Redis if multi-instance scaling is needed.
+- **Admin auth** uses SHA-256 + static salt for password hashing and a random session token stored in the DB, passed via `x-admin-token` header.
+
+---
+
+## Deployment
+
+The project is configured for **Replit Autoscale** deployment out of the box (see `.replit`). For other platforms:
+
+1. Build: `pnpm run build`
+2. Serve the API: `node --enable-source-maps artifacts/api-server/dist/index.mjs`
+3. Serve the frontend: build output in `artifacts/sievoo/dist/` — serve as static files behind the same domain or a CDN
+
+---
+
+## License
+
+MIT
