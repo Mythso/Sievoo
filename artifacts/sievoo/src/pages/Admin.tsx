@@ -53,7 +53,6 @@ export default function Admin() {
               <ShieldAlert className="w-6 h-6 text-destructive" />
             </div>
             <CardTitle>Admin Terminal</CardTitle>
-            <CardDescription>Restricted access. Use <code className="text-primary bg-primary/10 px-1 rounded">AdminPass123!</code> for demo.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
