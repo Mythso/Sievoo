@@ -27,6 +27,22 @@ if (!basePath) {
   );
 }
 
+// In the split Railway deployment, the frontend (this service) and the API
+// server are separate services with separate origins. On Replit they shared
+// one origin, so the app calls relative paths like "/api/...". API_URL lets
+// us proxy those calls to the api-server service so the frontend code does
+// not need to change.
+const apiProxyTarget = process.env.API_URL;
+
+const proxyConfig = apiProxyTarget
+  ? {
+      '/api': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+    }
+  : undefined;
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -72,10 +88,12 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: proxyConfig,
   },
   preview: {
     port,
     host: '0.0.0.0',
     allowedHosts: true,
+    proxy: proxyConfig,
   },
 });
