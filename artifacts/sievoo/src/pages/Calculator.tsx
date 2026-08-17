@@ -19,7 +19,7 @@ interface CalcInputs {
   // Step 1
   rf: number; beta: number; rm: number; e: number; d: number; rd: number; tc: number;
   // Step 2
-  baseRev: number; revGrowth: number; fcfMargin: number; cushion: number;
+  baseRev: number; revGrowth: number; fcfMargin: number; cushion: number; projectionYears: number;
   // Step 3
   tvMethod: TVMethod; g: number; ebitdaMultiple: number; ebitdaY5: number;
   // Step 4
@@ -29,7 +29,7 @@ interface CalcInputs {
 
 const DEFAULT_INPUTS: CalcInputs = {
   rf: 4.5, beta: 1.1, rm: 10.0, e: 1000, d: 200, rd: 6.0, tc: 21.0,
-  baseRev: 500, revGrowth: 15.0, fcfMargin: 12.0, cushion: 10.0,
+  baseRev: 500, revGrowth: 15.0, fcfMargin: 12.0, cushion: 10.0, projectionYears: 5,
   tvMethod: 'perpetuity', g: 2.5, ebitdaMultiple: 15.0, ebitdaY5: 120,
   cash: 150, debtTotal: 200, shares: 50, currentPrice: 25.0,
   wActual: 2.0
@@ -96,7 +96,8 @@ export default function Calculator() {
       const r_mult = 1 + gRate / 100;
       let sumPV = 0;
       const table = [];
-      for (let i = 1; i <= 5; i++) {
+      const years = Math.max(1, Math.round(inputs.projectionYears));
+      for (let i = 1; i <= years; i++) {
         r *= r_mult;
         const fcf = r * (m / 100);
         const pv = fcf / Math.pow(1 + w / 100, i);
@@ -106,14 +107,14 @@ export default function Calculator() {
       
       let tv = 0;
       if (inputs.tvMethod === 'perpetuity') {
-        const fcf5 = table[4].fcf;
+        const fcfFinal = table[table.length - 1].fcf;
         const termG = inputs.g / 100;
-        tv = (fcf5 * (1 + termG)) / (w / 100 - termG);
+        tv = (fcfFinal * (1 + termG)) / (w / 100 - termG);
       } else {
         tv = inputs.ebitdaMultiple * inputs.ebitdaY5; // simplification
       }
       
-      const pvTv = tv / Math.pow(1 + w / 100, 5);
+      const pvTv = tv / Math.pow(1 + w / 100, years);
       const ev = sumPV + pvTv;
       const eq = ev + inputs.cash - inputs.debtTotal;
       const vDcf = inputs.shares > 0 ? eq / inputs.shares : 0;
@@ -213,6 +214,7 @@ export default function Calculator() {
         bear_dcf: scenarios.bear.vDcf,
         bull_dcf: scenarios.bull.vDcf,
         margin_of_safety: upside,
+        projection_years: inputs.projectionYears,
         author_alias: alias,
         full_inputs_json: JSON.stringify({ inputs, gates, scores }),
         edit_pin: pubPin || undefined
@@ -390,13 +392,13 @@ export default function Calculator() {
               {/* STEP 2 */}
               <TabsContent value="step2" className="space-y-6 mt-0">
                 <div className="text-xs text-muted-foreground bg-muted/50 border border-border/50 p-3 rounded-md leading-relaxed">
-                  <span className="font-bold text-foreground">Free Cash Flow (FCF)</span> is the cash left after operating costs and capex — the real earnings of the business. We project FCF over 5 years using: <span className="font-mono">FCF_n = Revenue_n × FCFmargin%</span>. Three scenarios (Bear / Base / Bull) stress-test growth rate and WACC simultaneously so you see the valuation range, not a false single number.
+                  <span className="font-bold text-foreground">Free Cash Flow (FCF)</span> is the cash left after operating costs and capex — the real earnings of the business. We project FCF over {inputs.projectionYears} years using: <span className="font-mono">FCF_n = Revenue_n × FCFmargin%</span>. Three scenarios (Bear / Base / Bull) stress-test growth rate and WACC simultaneously so you see the valuation range, not a false single number.
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="grid gap-2">
                     <Label className="text-xs">Last Twelve Months Revenue — Yr 0 ($M)</Label>
                     <Input type="number" value={inputs.baseRev} onChange={e => updateInput('baseRev', e.target.value)} className="font-mono" />
-                    <span className="text-[10px] text-muted-foreground">Starting point for 5-year projection. Use LTM (last 12 months) revenue from the income statement.</span>
+                    <span className="text-[10px] text-muted-foreground">Starting point for the {inputs.projectionYears}-year projection. Use LTM (last 12 months) revenue from the income statement.</span>
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-xs">Base Revenue Growth Rate (%)</Label>
@@ -412,6 +414,11 @@ export default function Calculator() {
                     <Label className="text-xs">Safety Margin Cushion (%)</Label>
                     <Input type="number" step="0.1" value={inputs.cushion} onChange={e => updateInput('cushion', e.target.value)} className="font-mono" />
                     <span className="text-[10px] text-muted-foreground">Built-in conservatism. 10 % = base growth is {100-inputs.cushion}% of your entered rate. Recommended: 10–20 %.</span>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-xs">Projection Time Horizon (years)</Label>
+                    <Input type="number" step="1" min="1" max="15" value={inputs.projectionYears} onChange={e => updateInput('projectionYears', e.target.value)} className="font-mono" />
+                    <span className="text-[10px] text-muted-foreground">Number of years of explicit FCF projections before the terminal value kicks in. 5 years is standard; use fewer for volatile businesses, more only if you have real visibility.</span>
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground bg-muted p-3 rounded space-y-1">
@@ -583,7 +590,7 @@ export default function Calculator() {
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                        <strong className="text-foreground">Confirmation test:</strong> Look at gross margin trend over 5 years. A real moat defends or expands margins — a fake moat erodes them as competition intensifies. Also check return on invested capital (ROIC) vs WACC: sustained ROIC {'>'} WACC = economic moat.
+                        <strong className="text-foreground">Confirmation test:</strong> Look at gross margin trend over the same {inputs.projectionYears}-year window. A real moat defends or expands margins — a fake moat erodes them as competition intensifies. Also check return on invested capital (ROIC) vs WACC: sustained ROIC {'>'} WACC = economic moat.
                       </div>
                     </div>
                   </div>
