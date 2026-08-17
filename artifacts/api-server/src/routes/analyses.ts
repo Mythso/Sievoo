@@ -30,6 +30,7 @@ function toApiAnalysis(row: typeof analysesTable.$inferSelect) {
     bear_dcf: row.bearDcf,
     bull_dcf: row.bullDcf,
     margin_of_safety: row.marginOfSafety,
+    projection_years: row.projectionYears,
     user_notes: row.userNotes ?? null,
     full_inputs_json: row.fullInputsJson,
     likes_count: row.likesCount,
@@ -112,7 +113,7 @@ router.post("/analyses", async (req, res): Promise<void> => {
     return;
   }
 
-  const { title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, user_notes, full_inputs_json, author_alias, edit_pin } =
+  const { title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, projection_years, user_notes, full_inputs_json, author_alias, edit_pin } =
     parsed.data;
 
   const [row] = await db
@@ -125,6 +126,7 @@ router.post("/analyses", async (req, res): Promise<void> => {
       bearDcf: bear_dcf,
       bullDcf: bull_dcf,
       marginOfSafety: margin_of_safety,
+      projectionYears: projection_years ?? 5,
       userNotes: user_notes ?? null,
       fullInputsJson: full_inputs_json,
       authorAlias: author_alias,
@@ -192,6 +194,7 @@ router.patch("/analyses/:id", async (req, res): Promise<void> => {
   if (parsed.data.bear_dcf != null) updates.bearDcf = parsed.data.bear_dcf;
   if (parsed.data.bull_dcf != null) updates.bullDcf = parsed.data.bull_dcf;
   if (parsed.data.margin_of_safety != null) updates.marginOfSafety = parsed.data.margin_of_safety;
+  if (parsed.data.projection_years != null) updates.projectionYears = parsed.data.projection_years;
 
   const [updated] = await db
     .update(analysesTable)
