@@ -45,6 +45,16 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
   const isSafe = analysis.margin_of_safety > 15;
   const isRisky = analysis.margin_of_safety < 0;
 
+  const projectionYears = useMemo(() => {
+    if (analysis.projection_years != null) return analysis.projection_years;
+    try {
+      const parsed = JSON.parse(analysis.full_inputs_json);
+      return parsed?.inputs?.projectionYears ?? 5;
+    } catch {
+      return 5;
+    }
+  }, [analysis.projection_years, analysis.full_inputs_json]);
+
   return (
     <Card className="flex flex-col h-full bg-card border-border hover-elevate transition-all duration-300">
       <CardHeader className="pb-4 border-b border-border/50">
@@ -66,6 +76,8 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
           <span className="text-foreground/80 font-medium">@{analysis.author_alias}</span>
           <span className="mx-2">•</span>
           <span>{format(new Date(analysis.created_at), 'MMM d, yyyy')}</span>
+          <span className="mx-2">•</span>
+          <span>{projectionYears}-yr DCF</span>
         </div>
       </CardHeader>
       
