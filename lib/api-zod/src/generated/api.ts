@@ -46,7 +46,8 @@ export const ListAnalysesResponse = zod.object({
   "likes_count": zod.number(),
   "created_at": zod.string(),
   "author_alias": zod.string(),
-  "has_edit_pin": zod.boolean().optional()
+  "has_edit_pin": zod.boolean().optional(),
+  "projection_years": zod.number().optional()
 })),
   "total": zod.number()
 })
@@ -66,7 +67,8 @@ export const CreateAnalysisBody = zod.object({
   "user_notes": zod.string().optional(),
   "full_inputs_json": zod.string(),
   "author_alias": zod.string(),
-  "edit_pin": zod.string().nullish()
+  "edit_pin": zod.string().nullish(),
+  "projection_years": zod.number().optional()
 })
 
 export const CreateAnalysisResponse = zod.object({
@@ -83,7 +85,8 @@ export const CreateAnalysisResponse = zod.object({
   "likes_count": zod.number(),
   "created_at": zod.string(),
   "author_alias": zod.string(),
-  "has_edit_pin": zod.boolean().optional()
+  "has_edit_pin": zod.boolean().optional(),
+  "projection_years": zod.number().optional()
 })
 
 
@@ -121,7 +124,8 @@ export const GetAnalysisResponse = zod.object({
   "likes_count": zod.number(),
   "created_at": zod.string(),
   "author_alias": zod.string(),
-  "has_edit_pin": zod.boolean().optional()
+  "has_edit_pin": zod.boolean().optional(),
+  "projection_years": zod.number().optional()
 })
 
 
@@ -141,7 +145,8 @@ export const UpdateAnalysisBody = zod.object({
   "base_dcf": zod.number().nullish(),
   "bear_dcf": zod.number().nullish(),
   "bull_dcf": zod.number().nullish(),
-  "margin_of_safety": zod.number().nullish()
+  "margin_of_safety": zod.number().nullish(),
+  "projection_years": zod.number().nullish()
 })
 
 export const UpdateAnalysisResponse = zod.object({
@@ -158,7 +163,8 @@ export const UpdateAnalysisResponse = zod.object({
   "likes_count": zod.number(),
   "created_at": zod.string(),
   "author_alias": zod.string(),
-  "has_edit_pin": zod.boolean().optional()
+  "has_edit_pin": zod.boolean().optional(),
+  "projection_years": zod.number().optional()
 })
 
 
