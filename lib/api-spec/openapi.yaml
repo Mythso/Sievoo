@@ -374,7 +374,7 @@ components:
 
     Analysis:
       type: object
-      required: [id, title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, likes_count, created_at, author_alias, full_inputs_json]
+      required: [id, title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, likes_count, created_at, author_alias, full_inputs_json, projection_years]
       properties:
         id:
           type: number
@@ -404,6 +404,8 @@ components:
           type: string
         has_edit_pin:
           type: boolean
+        projection_years:
+          type: number
 
     AnalysisList:
       type: object
@@ -442,6 +444,8 @@ components:
           type: string
         edit_pin:
           type: ["string", "null"]
+        projection_years:
+          type: number
 
     AnalysisUpdate:
       type: object
@@ -464,6 +468,8 @@ components:
         bull_dcf:
           type: ["number", "null"]
         margin_of_safety:
+          type: ["number", "null"]
+        projection_years:
           type: ["number", "null"]
 
     PinVerify:
