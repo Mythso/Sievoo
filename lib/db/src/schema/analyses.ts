@@ -11,6 +11,7 @@ export const analysesTable = pgTable("published_analyses", {
   bearDcf: real("bear_dcf").notNull(),
   bullDcf: real("bull_dcf").notNull(),
   marginOfSafety: real("margin_of_safety").notNull(),
+  projectionYears: integer("projection_years").notNull().default(5),
   userNotes: text("user_notes"),
   fullInputsJson: text("full_inputs_json").notNull(),
   likesCount: integer("likes_count").notNull().default(0),
