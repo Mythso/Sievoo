@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldAlert, Trash2, CheckCircle2, Lock, Inbox } from 'lucide-react';
+import { ShieldAlert, Trash2, CheckCircle2, Lock, Inbox, LineChart, RefreshCw, Plus } from 'lucide-react';
 import { useAdminAuth, useListAdminMessages, useUpdateAdminMessage, useDeleteAdminMessage, useUpdateAdminPassword } from '@workspace/api-client-react';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -137,6 +137,7 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
       <Tabs defaultValue="messages">
         <TabsList className="bg-muted border border-border">
           <TabsTrigger value="messages" className="font-mono uppercase text-xs tracking-wider"><Inbox className="w-4 h-4 mr-2"/> Inbox</TabsTrigger>
+          <TabsTrigger value="watchlist" className="font-mono uppercase text-xs tracking-wider"><LineChart className="w-4 h-4 mr-2"/> Watchlist</TabsTrigger>
           <TabsTrigger value="security" className="font-mono uppercase text-xs tracking-wider"><Lock className="w-4 h-4 mr-2"/> Security</TabsTrigger>
         </TabsList>
 
@@ -199,6 +200,10 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
           </Card>
         </TabsContent>
 
+        <TabsContent value="watchlist" className="mt-6">
+          <WatchlistTab token={token} />
+        </TabsContent>
+
         <TabsContent value="security" className="mt-6">
           <Card className="max-w-xl bg-card border-border shadow-xl">
             <CardHeader>
@@ -222,6 +227,216 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+\n
+
+interface WatchlistValuation {
+  price: number | null;
+  revenue: number | null;
+  rev_growth: number | null;
+  fcf_margin: number | null;
+  beta: number | null;
+  wacc: number | null;
+  bear_dcf: number | null;
+  base_dcf: number | null;
+  bull_dcf: number | null;
+  margin_of_safety: number | null;
+  status: 'ok' | 'error';
+  error_message: string | null;
+  computed_at: string;
+}
+
+interface WatchlistCompany {
+  id: number;
+  ticker: string;
+  company_name: string | null;
+  notes: string | null;
+  projection_years: number;
+  added_at: string;
+  latest_valuation: WatchlistValuation | null;
+}
+
+function WatchlistTab({ token }: { token: string }) {
+  const { toast } = useToast();
+  const [companies, setCompanies] = useState<WatchlistCompany[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [ticker, setTicker] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  const loadWatchlist = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/watchlist');
+      if (!res.ok) throw new Error('Failed to load watchlist');
+      const data = await res.json();
+      setCompanies(data.items);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Could not load watchlist.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadWatchlist(); }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticker.trim()) return;
+    setIsAdding(true);
+    try {
+      const res = await fetch('/api/admin/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), company_name: companyName.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to add company');
+      }
+      const addedTicker = ticker.trim().toUpperCase();
+      setTicker('');
+      setCompanyName('');
+      toast({ title: 'Added', description: `${addedTicker} added to the watchlist.` });
+      await loadWatchlist();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to add company', variant: 'destructive' });
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleDelete = async (id: number, tickerLabel: string) => {
+    if (!confirm(`Remove ${tickerLabel} from the watchlist?`)) return;
+    try {
+      const res = await fetch(`/api/admin/watchlist/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token },
+      });
+      if (!res.ok) throw new Error('Failed to remove company');
+      toast({ title: 'Removed', description: `${tickerLabel} removed.` });
+      await loadWatchlist();
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to remove company.', variant: 'destructive' });
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/admin/watchlist/refresh', {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const data = await res.json();
+      toast({ title: 'Refresh complete', description: `${data.updated} updated, ${data.failed} failed.` });
+      await loadWatchlist();
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to refresh watchlist.', variant: 'destructive' });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const fmt = (n: number | null | undefined, decimals = 2) => (n == null ? '\u2014' : n.toFixed(decimals));
+
+  return (
+    <div className="space-y-6">
+      <Card className="bg-card border-border shadow-xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border/50">
+          <div>
+            <CardTitle>Followed Companies</CardTitle>
+            <CardDescription>Auto-updated weekly via the watchlist job (Yahoo Finance + DCF).</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="font-mono text-xs">
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh now'}
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead>Ticker</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Bear / Base / Bull</TableHead>
+                <TableHead>Margin of Safety</TableHead>
+                <TableHead>Last Updated</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={6} className="text-center py-8">Loading...</TableCell></TableRow>
+              ) : companies.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No companies followed yet.</TableCell></TableRow>
+              ) : (
+                companies.map((c) => {
+                  const v = c.latest_valuation;
+                  return (
+                    <TableRow key={c.id} className="border-border hover:bg-muted/10">
+                      <TableCell>
+                        <div className="font-bold text-sm">{c.ticker}</div>
+                        {c.company_name && <div className="text-xs text-muted-foreground">{c.company_name}</div>}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {v?.status === 'error' ? (
+                          <span className="text-destructive">Error</span>
+                        ) : v?.price != null ? `$${fmt(v.price)}` : '\u2014'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        {v && v.status === 'ok' ? `$${fmt(v.bear_dcf)} / $${fmt(v.base_dcf)} / $${fmt(v.bull_dcf)}` : '\u2014'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {v && v.status === 'ok' && v.margin_of_safety != null ? (
+                          <span className={v.margin_of_safety >= 0 ? 'text-primary' : 'text-destructive'}>
+                            {fmt(v.margin_of_safety, 1)}%
+                          </span>
+                        ) : '\u2014'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground">
+                        {v ? format(new Date(v.computed_at), 'MMM d, HH:mm') : 'Not yet run'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(c.id, c.ticker)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-xl bg-card border-border shadow-xl">
+        <CardHeader>
+          <CardTitle>Add Company</CardTitle>
+          <CardDescription>Add a ticker to follow. The weekly job fetches price, fundamentals and runs a fresh DCF automatically.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Ticker</Label>
+              <Input placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} className="bg-input font-mono uppercase" />
+            </div>
+            <div className="space-y-2">
+              <Label>Company name (optional)</Label>
+              <Input placeholder="e.g. Apple Inc." value={companyName} onChange={e => setCompanyName(e.target.value)} className="bg-input" />
+            </div>
+            <Button type="submit" disabled={isAdding || !ticker.trim()} className="font-mono uppercase tracking-wider bg-primary hover:bg-primary/90">
+              <Plus className="w-4 h-4 mr-2" />
+              {isAdding ? 'Adding...' : 'Add to Watchlist'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
