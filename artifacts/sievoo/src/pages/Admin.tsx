@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldAlert, Trash2, CheckCircle2, Lock, Inbox, LineChart, RefreshCw, Plus } from 'lucide-react';
+import { ShieldAlert, Trash2, CheckCircle2, Lock, Inbox, LineChart, RefreshCw, Plus, ExternalLink } from 'lucide-react';
 import { useAdminAuth, useListAdminMessages, useUpdateAdminMessage, useDeleteAdminMessage, useUpdateAdminPassword } from '@workspace/api-client-react';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -265,6 +265,8 @@ interface WatchlistCompany {
   company_name: string | null;
   notes: string | null;
   projection_years: number;
+  auto_publish: boolean;
+  published_analysis_id: number | null;
   added_at: string;
   latest_valuation: WatchlistValuation | null;
 }
@@ -277,6 +279,7 @@ function WatchlistTab({ token }: { token: string }) {
   const [ticker, setTicker] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [autoPublish, setAutoPublish] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const loadWatchlist = async () => {
@@ -303,7 +306,7 @@ function WatchlistTab({ token }: { token: string }) {
       const res = await fetch('/api/admin/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), company_name: companyName.trim() || undefined }),
+        body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), company_name: companyName.trim() || undefined, auto_publish: autoPublish }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -433,9 +436,22 @@ function WatchlistTab({ token }: { token: string }) {
                           {v ? format(new Date(v.computed_at), 'MMM d, HH:mm') : 'Not yet run'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(c.id, c.ticker)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            {c.auto_publish && c.published_analysis_id && (
+                              <a
+                                href={`/calculator?fork=${c.published_analysis_id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Se publisert analyse"
+                                className="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            )}
+                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(c.id, c.ticker)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                       {isExpanded && hasTransactions && (
@@ -486,6 +502,15 @@ function WatchlistTab({ token }: { token: string }) {
               <Label>Company name (optional)</Label>
               <Input placeholder="e.g. Apple Inc." value={companyName} onChange={e => setCompanyName(e.target.value)} className="bg-input" />
             </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoPublish}
+                onChange={e => setAutoPublish(e.target.checked)}
+                className="accent-primary"
+              />
+              Publiser automatisk i community-feeden (oppdateres ukentlig)
+            </label>
             <Button type="submit" disabled={isAdding || !ticker.trim()} className="font-mono uppercase tracking-wider bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
               {isAdding ? 'Adding...' : 'Add to Watchlist'}
