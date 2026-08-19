@@ -78,6 +78,8 @@ router.get("/watchlist", async (_req, res): Promise<void> => {
       company_name: c.companyName,
       notes: c.notes,
       projection_years: c.projectionYears,
+      auto_publish: !!c.autoPublish,
+      published_analysis_id: c.publishedAnalysisId,
       added_at: c.addedAt.toISOString(),
       latest_valuation: latest ? toApiValuation(latest) : null,
     };
@@ -102,7 +104,7 @@ router.post("/admin/watchlist", async (req, res): Promise<void> => {
     return;
   }
 
-  const { ticker, company_name, notes, projection_years } = parsed.data;
+  const { ticker, company_name, notes, projection_years, auto_publish } = parsed.data;
 
   try {
     const [row] = await db
@@ -112,6 +114,7 @@ router.post("/admin/watchlist", async (req, res): Promise<void> => {
         companyName: company_name ?? null,
         notes: notes ?? null,
         projectionYears: projection_years ?? 5,
+        autoPublish: auto_publish === false ? 0 : 1,
       })
       .returning();
 
@@ -122,6 +125,8 @@ router.post("/admin/watchlist", async (req, res): Promise<void> => {
         company_name: row.companyName,
         notes: row.notes,
         projection_years: row.projectionYears,
+        auto_publish: !!row.autoPublish,
+        published_analysis_id: row.publishedAnalysisId,
         added_at: row.addedAt.toISOString(),
         latest_valuation: null,
       }),
