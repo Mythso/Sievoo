@@ -47,6 +47,8 @@ export const watchlistValuationsTable = pgTable("watchlist_valuations", {
   baseDcf: real("base_dcf"),
   bullDcf: real("bull_dcf"),
   marginOfSafety: real("margin_of_safety"),
+  insiderScore: real("insider_score"),
+  insiderTransactionsJson: text("insider_transactions_json"),
   rawJson: text("raw_json"),
   status: text("status").notNull().default("ok"),
   errorMessage: text("error_message"),
