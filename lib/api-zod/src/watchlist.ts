@@ -6,6 +6,15 @@
  */
 import * as zod from 'zod';
 
+export const InsiderTransactionItem = zod.object({
+  "filer": zod.string().nullish(),
+  "relation": zod.string().nullish(),
+  "transaction_text": zod.string().nullish(),
+  "shares": zod.number().nullish(),
+  "value": zod.number().nullish(),
+  "date": zod.string().nullish()
+});
+
 export const WatchlistValuationSnapshot = zod.object({
   "price": zod.number().nullish(),
   "revenue": zod.number().nullish(),
@@ -17,6 +26,8 @@ export const WatchlistValuationSnapshot = zod.object({
   "base_dcf": zod.number().nullish(),
   "bull_dcf": zod.number().nullish(),
   "margin_of_safety": zod.number().nullish(),
+  "insider_score": zod.number().nullish(),
+  "insider_transactions": zod.array(InsiderTransactionItem).nullish(),
   "status": zod.enum(['ok', 'error']),
   "error_message": zod.string().nullish(),
   "computed_at": zod.string()
