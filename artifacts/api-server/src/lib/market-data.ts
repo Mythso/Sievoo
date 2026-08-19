@@ -97,7 +97,6 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
 
   return { ticker, price, shares, beta, cash, debtTotal, revenue, revGrowth, fcfMargin };
 }
-\n
 
 // ---------------------------------------------------------------------------
 // Insider trading data (meldepliktig handel)
