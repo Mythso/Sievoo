@@ -1,5 +1,5 @@
 import { db, watchlistCompaniesTable, watchlistValuationsTable } from "@workspace/db";
-import { fetchMarketData } from "./market-data";
+import { fetchMarketData, fetchInsiderData } from "./market-data";
 import { calculateDcf } from "./valuation";
 import { logger } from "./logger";
 
@@ -22,6 +22,22 @@ export async function runWatchlistUpdate(): Promise<WatchlistJobResultItem[]> {
   for (const company of companies) {
     try {
       const market = await fetchMarketData(company.ticker);
+
+      // Insider data isn't available for every ticker (esp. smaller/non-US
+      // listings), so a failure here falls back to a neutral score instead
+      // of failing the whole company's valuation.
+      let insiderScore = 50;
+      let insiderTransactionsJson: string | null = null;
+      try {
+        const insider = await fetchInsiderData(company.ticker);
+        insiderScore = insider.score;
+        insiderTransactionsJson = JSON.stringify(insider.transactions);
+      } catch (insiderErr) {
+        logger.warn(
+          { err: insiderErr, ticker: company.ticker },
+          "Insider data unavailable, using neutral score",
+        );
+      }
 
       const dcf = calculateDcf({
         rf: company.riskFreeRate,
@@ -59,6 +75,8 @@ export async function runWatchlistUpdate(): Promise<WatchlistJobResultItem[]> {
         baseDcf: dcf.base,
         bullDcf: dcf.bull,
         marginOfSafety: dcf.marginOfSafety,
+        insiderScore,
+        insiderTransactionsJson,
         rawJson: JSON.stringify({ market, dcf }),
         status: "ok",
       });
