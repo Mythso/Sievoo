@@ -29,6 +29,24 @@ function toApiValuation(row: typeof watchlistValuationsTable.$inferSelect) {
     base_dcf: row.baseDcf,
     bull_dcf: row.bullDcf,
     margin_of_safety: row.marginOfSafety,
+    insider_score: row.insiderScore,
+    insider_transactions: row.insiderTransactionsJson
+      ? (() => {
+          try {
+            const parsed = JSON.parse(row.insiderTransactionsJson as string);
+            return parsed.map((t: any) => ({
+              filer: t.filer ?? null,
+              relation: t.relation ?? null,
+              transaction_text: t.transactionText ?? null,
+              shares: t.shares ?? null,
+              value: t.value ?? null,
+              date: t.date ?? null,
+            }));
+          } catch {
+            return null;
+          }
+        })()
+      : null,
     status: row.status as "ok" | "error",
     error_message: row.errorMessage,
     computed_at: row.computedAt.toISOString(),
