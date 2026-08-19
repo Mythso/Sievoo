@@ -4,6 +4,7 @@ import analysesRouter from "./analyses";
 import commentsRouter from "./comments";
 import contactRouter from "./contact";
 import adminRouter from "./admin";
+import watchlistRouter from "./watchlist";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(analysesRouter);
 router.use(commentsRouter);
 router.use(contactRouter);
 router.use(adminRouter);
+router.use(watchlistRouter);
 
 export default router;
