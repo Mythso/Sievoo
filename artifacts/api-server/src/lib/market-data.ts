@@ -97,3 +97,117 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
 
   return { ticker, price, shares, beta, cash, debtTotal, revenue, revGrowth, fcfMargin };
 }
+\n
+
+// ---------------------------------------------------------------------------
+// Insider trading data (meldepliktig handel)
+// ---------------------------------------------------------------------------
+
+export interface InsiderTransaction {
+  filer: string | null;
+  relation: string | null;
+  transactionText: string | null;
+  shares: number | null;
+  value: number | null;
+  date: string | null; // ISO date, if available
+}
+
+export interface InsiderData {
+  score: number; // 0-100, 50 = neutral, computed from net insider buying/selling
+  netPercentInsiderShares: number | null; // e.g. 0.023 = insiders' holdings grew 2.3% over the period
+  buyCount: number;
+  sellCount: number;
+  transactions: InsiderTransaction[]; // most recent first, capped
+}
+
+function parseTransactions(raw: any[] | undefined): InsiderTransaction[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 10).map((t) => ({
+    filer: t.filerName ?? null,
+    relation: t.filerRelation ?? null,
+    transactionText: t.transactionText ?? null,
+    shares: t.shares?.raw ?? null,
+    value: t.value?.raw ?? null,
+    date: t.startDate?.fmt ?? null,
+  }));
+}
+
+function computeInsiderScore(
+  activity: any | undefined,
+  transactions: InsiderTransaction[],
+): { score: number; buyCount: number; sellCount: number } {
+  let score = 50;
+  let buyCount = 0;
+  let sellCount = 0;
+
+  if (activity) {
+    buyCount = activity.buyInfoCount?.raw ?? 0;
+    sellCount = activity.sellInfoCount?.raw ?? 0;
+    const netPct: number = activity.netPercentInsiderShares?.raw ?? 0;
+
+    // Net change in insider ownership over the period is the strongest signal.
+    score += netPct * 400;
+
+    const totalCount = buyCount + sellCount;
+    if (totalCount > 0) {
+      const buyRatio = buyCount / totalCount;
+      score += (buyRatio - 0.5) * 40;
+    }
+  } else if (transactions.length > 0) {
+    buyCount = transactions.filter((t) =>
+      /purchase|buy|kj\u00f8p/i.test(t.transactionText ?? ""),
+    ).length;
+    sellCount = transactions.filter((t) =>
+      /sale|sell|salg/i.test(t.transactionText ?? ""),
+    ).length;
+    const total = buyCount + sellCount;
+    if (total > 0) {
+      score += (buyCount / total - 0.5) * 60;
+    }
+  }
+
+  return { score: Math.max(0, Math.min(100, Math.round(score))), buyCount, sellCount };
+}
+
+/**
+ * Fetches recent insider (Form 4 / meldepliktig handel-equivalent) activity
+ * from Yahoo Finance and derives a 0-100 "insider score" (50 = neutral,
+ * higher = net insider buying). Uses the same cookie/crumb session as
+ * fetchMarketData. Returns a neutral score if Yahoo has no insider data
+ * for the ticker (common for smaller / non-US listings).
+ */
+export async function fetchInsiderData(ticker: string): Promise<InsiderData> {
+  const { cookie, crumb } = await getCookieAndCrumb();
+
+  const modules = "insiderTransactions,netSharePurchaseActivity";
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
+    ticker,
+  )}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT, Cookie: cookie },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Yahoo Finance insider request failed for ${ticker}: ${res.status}`);
+  }
+
+  const json = (await res.json()) as any;
+  const result = json?.quoteSummary?.result?.[0];
+  if (!result) {
+    // No insider module coverage for this ticker; treat as neutral rather than failing the whole run.
+    return { score: 50, netPercentInsiderShares: null, buyCount: 0, sellCount: 0, transactions: [] };
+  }
+
+  const activity = result.netSharePurchaseActivity;
+  const transactions = parseTransactions(result.insiderTransactions?.transactions);
+  const { score, buyCount, sellCount } = computeInsiderScore(activity, transactions);
+
+  return {
+    score,
+    netPercentInsiderShares: activity?.netPercentInsiderShares?.raw ?? null,
+    buyCount,
+    sellCount,
+    transactions,
+  };
+}
