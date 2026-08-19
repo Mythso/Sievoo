@@ -230,7 +230,6 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
     </div>
   );
 }
-\n
 
 interface WatchlistInsiderTransaction {
   filer: string | null;
