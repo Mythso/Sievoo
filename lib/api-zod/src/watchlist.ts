@@ -39,6 +39,8 @@ export const WatchlistCompanyItem = zod.object({
   "company_name": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "projection_years": zod.number(),
+  "auto_publish": zod.boolean(),
+  "published_analysis_id": zod.number().nullish(),
   "added_at": zod.string(),
   "latest_valuation": WatchlistValuationSnapshot.nullish()
 });
@@ -61,7 +63,8 @@ export const AddWatchlistCompanyBody = zod.object({
   "ticker": zod.string().min(1).max(10),
   "company_name": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "projection_years": zod.number().nullish()
+  "projection_years": zod.number().nullish(),
+  "auto_publish": zod.boolean().nullish()
 });
 
 export const AddWatchlistCompanyResponse = WatchlistCompanyItem;
