@@ -45,7 +45,7 @@ async function ensureAdminExists(): Promise<void> {
 // Initialize admin on module load
 ensureAdminExists().catch((err) => logger.error({ err }, "Failed to init admin config"));
 
-async function verifyAdminToken(token: string): Promise<boolean> {
+export async function verifyAdminToken(token: string): Promise<boolean> {
   const [admin] = await db.select().from(adminConfigTable).limit(1);
   return !!admin && admin.sessionToken === token;
 }
