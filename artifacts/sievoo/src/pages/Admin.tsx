@@ -232,6 +232,15 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
 }
 \n
 
+interface WatchlistInsiderTransaction {
+  filer: string | null;
+  relation: string | null;
+  transaction_text: string | null;
+  shares: number | null;
+  value: number | null;
+  date: string | null;
+}
+
 interface WatchlistValuation {
   price: number | null;
   revenue: number | null;
@@ -243,6 +252,8 @@ interface WatchlistValuation {
   base_dcf: number | null;
   bull_dcf: number | null;
   margin_of_safety: number | null;
+  insider_score: number | null;
+  insider_transactions: WatchlistInsiderTransaction[] | null;
   status: 'ok' | 'error';
   error_message: string | null;
   computed_at: string;
@@ -266,6 +277,7 @@ function WatchlistTab({ token }: { token: string }) {
   const [ticker, setTicker] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const loadWatchlist = async () => {
     setIsLoading(true);
@@ -365,48 +377,92 @@ function WatchlistTab({ token }: { token: string }) {
                 <TableHead>Price</TableHead>
                 <TableHead>Bear / Base / Bull</TableHead>
                 <TableHead>Margin of Safety</TableHead>
+                <TableHead>Insider</TableHead>
                 <TableHead>Last Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8">Loading...</TableCell></TableRow>
               ) : companies.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No companies followed yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No companies followed yet.</TableCell></TableRow>
               ) : (
                 companies.map((c) => {
                   const v = c.latest_valuation;
+                  const hasTransactions = v?.insider_transactions && v.insider_transactions.length > 0;
+                  const isExpanded = expandedId === c.id;
+                  const insiderColor = v?.insider_score == null ? 'text-muted-foreground'
+                    : v.insider_score >= 60 ? 'text-primary'
+                    : v.insider_score <= 40 ? 'text-destructive'
+                    : 'text-muted-foreground';
                   return (
-                    <TableRow key={c.id} className="border-border hover:bg-muted/10">
-                      <TableCell>
-                        <div className="font-bold text-sm">{c.ticker}</div>
-                        {c.company_name && <div className="text-xs text-muted-foreground">{c.company_name}</div>}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {v?.status === 'error' ? (
-                          <span className="text-destructive">Error</span>
-                        ) : v?.price != null ? `$${fmt(v.price)}` : '\u2014'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs whitespace-nowrap">
-                        {v && v.status === 'ok' ? `$${fmt(v.bear_dcf)} / $${fmt(v.base_dcf)} / $${fmt(v.bull_dcf)}` : '\u2014'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {v && v.status === 'ok' && v.margin_of_safety != null ? (
-                          <span className={v.margin_of_safety >= 0 ? 'text-primary' : 'text-destructive'}>
-                            {fmt(v.margin_of_safety, 1)}%
-                          </span>
-                        ) : '\u2014'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground">
-                        {v ? format(new Date(v.computed_at), 'MMM d, HH:mm') : 'Not yet run'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(c.id, c.ticker)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow key={c.id} className="border-border hover:bg-muted/10">
+                        <TableCell>
+                          <div className="font-bold text-sm">{c.ticker}</div>
+                          {c.company_name && <div className="text-xs text-muted-foreground">{c.company_name}</div>}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {v?.status === 'error' ? (
+                            <span className="text-destructive">Error</span>
+                          ) : v?.price != null ? `$${fmt(v.price)}` : '\u2014'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs whitespace-nowrap">
+                          {v && v.status === 'ok' ? `$${fmt(v.bear_dcf)} / $${fmt(v.base_dcf)} / $${fmt(v.bull_dcf)}` : '\u2014'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {v && v.status === 'ok' && v.margin_of_safety != null ? (
+                            <span className={v.margin_of_safety >= 0 ? 'text-primary' : 'text-destructive'}>
+                              {fmt(v.margin_of_safety, 1)}%
+                            </span>
+                          ) : '\u2014'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {v?.insider_score != null ? (
+                            <button
+                              onClick={() => hasTransactions && setExpandedId(isExpanded ? null : c.id)}
+                              className={`${insiderColor} ${hasTransactions ? 'underline decoration-dotted cursor-pointer' : 'cursor-default'}`}
+                              title={hasTransactions ? 'Vis innsiderhandler' : 'Ingen innsiderhandler funnet'}
+                            >
+                              {v.insider_score}/100
+                            </button>
+                          ) : '\u2014'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground">
+                          {v ? format(new Date(v.computed_at), 'MMM d, HH:mm') : 'Not yet run'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(c.id, c.ticker)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && hasTransactions && (
+                        <TableRow key={`${c.id}-insider`} className="border-border bg-muted/20 hover:bg-muted/20">
+                          <TableCell colSpan={7} className="py-3">
+                            <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                              Siste innsiderhandler \u2014 {c.ticker}
+                            </div>
+                            <div className="space-y-1.5">
+                              {v!.insider_transactions!.map((tx, i) => (
+                                <div key={i} className="flex justify-between text-xs border-b border-border/30 pb-1.5 last:border-0">
+                                  <div>
+                                    <span className="font-bold">{tx.filer ?? 'Ukjent'}</span>
+                                    {tx.relation && <span className="text-muted-foreground"> ({tx.relation})</span>}
+                                    <span className="text-muted-foreground"> \u2014 {tx.transaction_text ?? 'N/A'}</span>
+                                  </div>
+                                  <div className="font-mono text-muted-foreground whitespace-nowrap ml-4">
+                                    {tx.shares != null && `${tx.shares.toLocaleString()} sh`}
+                                    {tx.date && ` \u00b7 ${tx.date}`}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   );
                 })
               )}
