@@ -210,3 +210,40 @@ export async function fetchInsiderData(ticker: string): Promise<InsiderData> {
     transactions,
   };
 }
+
+
+// ---------------------------------------------------------------------------
+// Ticker -> company name lookup (used for auto-filling company name fields)
+// ---------------------------------------------------------------------------
+
+export interface TickerLookupResult {
+  ticker: string;
+  companyName: string | null;
+}
+
+/**
+ * Looks up a ticker's display name via Yahoo Finance's "price" module.
+ * Returns companyName: null (not an error) if the ticker isn't found or
+ * has no name on file, so callers can fall back gracefully.
+ */
+export async function lookupTicker(ticker: string): Promise<TickerLookupResult> {
+  const { cookie, crumb } = await getCookieAndCrumb();
+
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
+    ticker,
+  )}?modules=price&crumb=${encodeURIComponent(crumb)}`;
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT, Cookie: cookie },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Yahoo Finance lookup failed for ${ticker}: ${res.status}`);
+  }
+
+  const json = (await res.json()) as any;
+  const price = json?.quoteSummary?.result?.[0]?.price;
+  const companyName: string | null = price?.longName ?? price?.shortName ?? null;
+
+  return { ticker: ticker.toUpperCase(), companyName };
+}
