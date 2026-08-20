@@ -277,6 +277,30 @@ function WatchlistTab({ token }: { token: string }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [ticker, setTicker] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [isLookingUpName, setIsLookingUpName] = useState(false);
+
+  // Auto-fill company name as soon as a ticker is typed, without clobbering
+  // a name the admin already typed in manually.
+  useEffect(() => {
+    const trimmed = ticker.trim();
+    if (!trimmed) return;
+    const handle = setTimeout(async () => {
+      setIsLookingUpName(true);
+      try {
+        const res = await fetch(`/api/ticker-lookup?ticker=${encodeURIComponent(trimmed)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.company_name) {
+          setCompanyName(prev => (prev.trim() ? prev : data.company_name));
+        }
+      } catch {
+        // silent - lookup is a convenience, not required
+      } finally {
+        setIsLookingUpName(false);
+      }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [ticker]);
   const [isAdding, setIsAdding] = useState(false);
   const [autoPublish, setAutoPublish] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -498,8 +522,8 @@ function WatchlistTab({ token }: { token: string }) {
               <Input placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} className="bg-input font-mono uppercase" />
             </div>
             <div className="space-y-2">
-              <Label>Company name (optional)</Label>
-              <Input placeholder="e.g. Apple Inc." value={companyName} onChange={e => setCompanyName(e.target.value)} className="bg-input" />
+              <Label>Company name {isLookingUpName ? '(looking up...)' : '(auto-filled from ticker, editable)'}</Label>
+              <Input placeholder="Auto-filled from ticker" value={companyName} onChange={e => setCompanyName(e.target.value)} className="bg-input" />
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
               <input
