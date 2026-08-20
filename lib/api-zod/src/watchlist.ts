@@ -100,3 +100,16 @@ export const RefreshWatchlistResponse = zod.object({
   "failed": zod.number(),
   "results": zod.array(RefreshWatchlistResultItem)
 });
+
+
+/**
+ * @summary Look up a company name from a ticker (public)
+ */
+export const TickerLookupQuery = zod.object({
+  "ticker": zod.string().min(1).max(10)
+});
+
+export const TickerLookupResponse = zod.object({
+  "ticker": zod.string(),
+  "company_name": zod.string().nullable()
+});
