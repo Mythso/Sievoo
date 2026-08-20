@@ -57,6 +57,34 @@ export default function Calculator() {
     if (saved) setAlias(saved);
   }, []);
 
+  // Ticker / Company (shown on the output card, used for publishing & the share card)
+  const [ticker, setTicker] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [isLookingUpName, setIsLookingUpName] = useState(false);
+
+  // Auto-fill company name as soon as a ticker is typed, without clobbering
+  // a name that was already set (manually, or from a fork/import).
+  useEffect(() => {
+    const trimmed = ticker.trim();
+    if (!trimmed) return;
+    const handle = setTimeout(async () => {
+      setIsLookingUpName(true);
+      try {
+        const res = await fetch(`/api/ticker-lookup?ticker=${encodeURIComponent(trimmed)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.company_name) {
+          setCompanyName(prev => (prev.trim() ? prev : data.company_name));
+        }
+      } catch {
+        // silent - lookup is a convenience, not required
+      } finally {
+        setIsLookingUpName(false);
+      }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [ticker]);
+
   // Hydrate from fork
   const hydratedRef = useRef(false);
   useEffect(() => {
@@ -66,6 +94,12 @@ export default function Calculator() {
         if (parsed.inputs) setInputs(parsed.inputs);
         if (parsed.gates) setGates({ moat: !!parsed.gates.moat, ceo: !!parsed.gates.ceo });
         if (parsed.scores) setScores(parsed.scores);
+        setTicker(forkedData.ticker ?? '');
+        // Company name isn't stored on the analysis record itself; the
+        // ticker lookup effect above will fill it in automatically once
+        // `ticker` is set, unless the auto-DCF title already carries it.
+        const titleMatch = /^(.+?)\s*\(/.exec(forkedData.title ?? '');
+        if (titleMatch) setCompanyName(titleMatch[1].trim());
         hydratedRef.current = true;
         toast({ title: "Fork loaded", description: `Loaded analysis for ${forkedData.ticker}` });
       } catch (e) {
@@ -165,12 +199,12 @@ export default function Calculator() {
 
   // File I/O
   const handleDownload = () => {
-    const state = { inputs, gates, scores };
+    const state = { inputs, gates, scores, ticker, companyName };
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sievoo_dcf_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `sievoo_dcf_${ticker || new Date().toISOString().slice(0,10)}.json`;
     a.click();
   };
 
@@ -184,6 +218,8 @@ export default function Calculator() {
         if (parsed.inputs) setInputs(parsed.inputs);
         if (parsed.gates) setGates(parsed.gates);
         if (parsed.scores) setScores(parsed.scores);
+        if (parsed.ticker) setTicker(parsed.ticker);
+        if (parsed.companyName) setCompanyName(parsed.companyName);
         toast({ title: 'Loaded', description: 'Calculator state restored.' });
       } catch {
         toast({ title: 'Error', description: 'Invalid JSON file.', variant: 'destructive' });
@@ -194,12 +230,11 @@ export default function Calculator() {
 
   // Publish
   const createMutation = useCreateAnalysis();
-  const [pubTicker, setPubTicker] = useState('');
   const [pubTitle, setPubTitle] = useState('');
   const [pubPin, setPubPin] = useState('');
 
   const handlePublish = () => {
-    if (!pubTicker || !pubTitle || !alias) {
+    if (!ticker || !pubTitle || !alias) {
       toast({ title: 'Missing fields', description: 'Ticker, Title, and Alias required.', variant: 'destructive' });
       return;
     }
@@ -207,7 +242,7 @@ export default function Calculator() {
     
     createMutation.mutate({
       data: {
-        ticker: pubTicker.toUpperCase(),
+        ticker: ticker.toUpperCase(),
         title: pubTitle,
         current_price: inputs.currentPrice,
         base_dcf: scenarios.base.vDcf,
@@ -250,7 +285,7 @@ export default function Calculator() {
     // Ticker & Price
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 32px sans-serif';
-    ctx.fillText(`${pubTicker || 'TICKER'} - $${inputs.currentPrice}`, 20, 100);
+    ctx.fillText(`${ticker || 'TICKER'} - $${inputs.currentPrice}`, 20, 100);
     
     // Action
     let aColor = '#10b981';
@@ -286,7 +321,7 @@ export default function Calculator() {
     const url = cvs.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sievoo_card_${pubTicker || 'ticker'}.png`;
+    a.download = `sievoo_card_${ticker || 'ticker'}.png`;
     a.click();
   };
 
@@ -679,8 +714,35 @@ export default function Calculator() {
       {/* RIGHT COL: OUTPUTS */}
       <div className="w-full lg:w-[40%] space-y-6">
         <Card className="bg-card border-border shadow-2xl sticky top-24">
-          <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
-            <CardTitle className="text-2xl font-bold tracking-tight uppercase">Valuation Output</CardTitle>
+          <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold tracking-tight uppercase">Valuation Output</CardTitle>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border rounded px-2 py-1">
+                {inputs.projectionYears}-yr DCF
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Ticker</Label>
+                <Input
+                  value={ticker}
+                  onChange={e => setTicker(e.target.value.toUpperCase())}
+                  placeholder="AAPL"
+                  className="font-mono uppercase bg-input h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Company {isLookingUpName ? '(looking up...)' : ''}
+                </Label>
+                <Input
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  placeholder="Auto-filled from ticker"
+                  className="bg-input h-9"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {/* 3 Scenarios Grid */}
@@ -759,7 +821,8 @@ export default function Calculator() {
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
                         <Label>Ticker</Label>
-                        <Input value={pubTicker} onChange={e => setPubTicker(e.target.value.toUpperCase())} className="font-mono uppercase" placeholder="AAPL" />
+                        <Input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())} className="font-mono uppercase" placeholder="AAPL" />
+                        <span className="text-[10px] text-muted-foreground">Set above in the Valuation Output card — editable here too.</span>
                       </div>
                       <div className="grid gap-2">
                         <Label>Title / Thesis</Label>
