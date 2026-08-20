@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { verifyAdminToken } from "./admin";
 import { runWatchlistUpdate } from "../lib/watchlist-job";
+import { lookupTicker } from "../lib/market-data";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -106,12 +107,24 @@ router.post("/admin/watchlist", async (req, res): Promise<void> => {
 
   const { ticker, company_name, notes, projection_years, auto_publish } = parsed.data;
 
+  // Auto-fill the company name from the ticker if the caller didn't provide
+  // one, so adding a company only ever requires typing the ticker.
+  let resolvedCompanyName = company_name ?? null;
+  if (!resolvedCompanyName) {
+    try {
+      const lookup = await lookupTicker(ticker);
+      resolvedCompanyName = lookup.companyName;
+    } catch (lookupErr) {
+      logger.warn({ err: lookupErr, ticker }, "Company name lookup failed while adding watchlist company");
+    }
+  }
+
   try {
     const [row] = await db
       .insert(watchlistCompaniesTable)
       .values({
         ticker: ticker.toUpperCase(),
-        companyName: company_name ?? null,
+        companyName: resolvedCompanyName,
         notes: notes ?? null,
         projectionYears: projection_years ?? 5,
         autoPublish: auto_publish === false ? 0 : 1,
