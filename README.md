@@ -13,6 +13,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - **CAPM/WACC** computation with real-time output
 - **Three scenarios** (Bear / Base / Bull) computed simultaneously — growth haircut + WACC stress applied automatically
 - **Terminal value** via Perpetuity Growth Model or EBITDA Exit Multiple
+- **Ticker & company name shown directly on the output card**, with company name auto-filled as soon as a ticker is typed; both persist through fork/save/load and follow the analysis when published
 - **4 Quality Gates** — two auto-detected from inputs, two require research:
   - *No BS Rule* (auto): positive rev growth, positive FCF margin, cash > debt (2/3 needed)
   - *Downside Protection* (auto): current price < Bear DCF
@@ -26,6 +27,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 ### Watchlist
 - Admin picks tickers to follow; a scheduled weekly job keeps each one up to date automatically
 - Per run: fetches current price and fundamentals (revenue, revenue growth, FCF margin, beta, cash, debt, shares outstanding), then computes a fresh Bear/Base/Bull DCF using the same math as the manual calculator
+- **Company name auto-fill**: type a ticker in the admin form and the company name is looked up and filled in automatically (still editable) — the server also fills it in if the request omits it
 - **Insider score (0–100)**: derived from recent insider buying/selling activity for the ticker; 50 = neutral, higher = net insider buying. Falls back to neutral when no insider data is available for a given ticker rather than failing the run
 - Each company's DCF assumptions (risk-free rate, market return, cost of debt, tax rate, terminal growth, cushion, projection years) are individually configurable, with sensible defaults
 - One bad ticker never blocks the rest of the run — failures are isolated and logged per company
@@ -93,7 +95,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 │   │   └── index.html        # Analytics tag lives here
 │   ├── api-server/                # Express API     (@workspace/api-server)
 │   │   └── src/
-│   │       ├── routes/       # analyses, comments, contact, admin, watchlist
+│   │       ├── routes/       # analyses, comments, contact, admin, watchlist, ticker
 │   │       ├── lib/          # market-data (price/fundamentals/insider fetch), valuation (DCF math), watchlist-job
 │   │       └── watchlist-worker.ts   # standalone entrypoint for the scheduled watchlist job
 │   └── mockup-sandbox/            # Internal component preview server
@@ -203,6 +205,7 @@ All routes are prefixed with `/api`.
 | `POST` | `/api/admin/watchlist` | Add a company to the watchlist (auth required) |
 | `DELETE` | `/api/admin/watchlist/:id` | Remove a company from the watchlist (auth required) |
 | `POST` | `/api/admin/watchlist/refresh` | Manually trigger a watchlist refresh run (auth required) |
+| `GET` | `/api/ticker-lookup` | Look up a company name from a ticker (public, used for auto-fill) |
 | `POST` | `/api/contact` | Submit contact form (rate-limited: 5 req/hr per IP) |
 | `POST` | `/api/admin/auth` | Admin login (rate-limited: 10 attempts/15 min) |
 | `GET` | `/api/admin/messages` | List contact messages (auth required) |
@@ -222,6 +225,7 @@ Admin endpoints require the `x-admin-token` header. Default admin password on fi
 - **In-memory rate limiting** (per process). Suitable for single-instance deployment; swap for Redis if multi-instance scaling is needed.
 - **Admin auth** uses SHA-256 + static salt for password hashing and a random session token stored in the DB, passed via the `x-admin-token` header.
 - **Watchlist data source**: current price, fundamentals, and insider activity are fetched from a public, no-API-key market data feed. Since this feed is unofficial, per-ticker failures are caught and logged individually rather than failing the whole run, and insider data falls back to a neutral score when unavailable for a given ticker.
+- **Cron worker env vars**: `watchlist-worker` runs on a schedule rather than continuously, and reference variables (e.g. `DATABASE_URL` pointing at `${{Postgres.DATABASE_URL}}`) only resolve reliably starting from the deployment where they were set — setting a variable on the service is not enough by itself, it also needs a redeploy (not just a scheduled cron run) to take effect.
 
 ---
 
