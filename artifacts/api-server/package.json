@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start:watchlist-worker": "node --enable-source-maps ./dist/watchlist-worker.mjs"
+    "start:watchlist-worker": "node --enable-source-maps ./dist/watchlist-worker.mjs",
+    "start:trending-worker": "node --enable-source-maps ./dist/trending-worker.mjs"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
