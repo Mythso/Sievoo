@@ -98,7 +98,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
   return { ticker, price, shares, beta, cash, debtTotal, revenue, revGrowth, fcfMargin };
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Insider trading data (meldepliktig handel)
 // ---------------------------------------------------------------------------
 
@@ -246,4 +246,43 @@ export async function lookupTicker(ticker: string): Promise<TickerLookupResult> 
   const companyName: string | null = price?.longName ?? price?.shortName ?? null;
 
   return { ticker: ticker.toUpperCase(), companyName };
+}
+
+// ---------------------------------------------------------------------------
+// Trending tickers (daily auto-discovery for the trending-worker)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches today's trending US tickers from Yahoo Finance's public
+ * "trending securities" endpoint. This is a lighter, unauthenticated
+ * endpoint that doesn't need the cookie/crumb dance used above.
+ * Only plain equity-style symbols are kept (crypto pairs like "BTC-USD"
+ * and indices like "^GSPC" are filtered out, since the DCF model doesn't
+ * apply to them).
+ */
+export async function fetchTrendingTickers(
+  region = "US",
+  count = 15,
+): Promise<string[]> {
+  const url = `https://query1.finance.yahoo.com/v1/finance/trending/${encodeURIComponent(
+    region,
+  )}?count=${count}`;
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Yahoo Finance trending request failed: ${res.status}`);
+  }
+
+  const json = (await res.json()) as any;
+  const quotes = json?.finance?.result?.[0]?.quotes ?? [];
+
+  return quotes
+    .map((q: any) => q?.symbol)
+    .filter(
+      (s: unknown): s is string =>
+        typeof s === "string" && /^[A-Z]{1,6}$/.test(s),
+    );
 }
