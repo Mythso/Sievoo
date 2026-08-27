@@ -135,3 +135,88 @@ export async function processCompany(
     }
 
     const dcf = calculateDcf({
+      rf: company.riskFreeRate,
+      beta: market.beta,
+      rm: company.marketReturn,
+      e: market.price * market.shares,
+      d: market.debtTotal,
+      rd: company.costOfDebt,
+      tc: company.taxRate,
+      baseRev: market.revenue,
+      revGrowth: market.revGrowth,
+      fcfMargin: market.fcfMargin,
+      cushion: company.cushion,
+      projectionYears: company.projectionYears,
+      g: company.terminalGrowth,
+      cash: market.cash,
+      debtTotal: market.debtTotal,
+      shares: market.shares,
+      currentPrice: market.price,
+    });
+
+    await db.insert(watchlistValuationsTable).values({
+      companyId: company.id,
+      ticker: company.ticker,
+      price: market.price,
+      revenue: market.revenue,
+      revGrowth: market.revGrowth,
+      fcfMargin: market.fcfMargin,
+      beta: market.beta,
+      shares: market.shares,
+      cash: market.cash,
+      debtTotal: market.debtTotal,
+      wacc: dcf.wacc,
+      bearDcf: dcf.bear,
+      baseDcf: dcf.base,
+      bullDcf: dcf.bull,
+      marginOfSafety: dcf.marginOfSafety,
+      insiderScore,
+      insiderTransactionsJson,
+      rawJson: JSON.stringify({ market, dcf }),
+      status: "ok",
+    });
+
+    try {
+      await publishOrUpdateAnalysis(company, market, dcf, insiderScore);
+    } catch (publishErr) {
+      logger.warn(
+        { err: publishErr, ticker: company.ticker },
+        "Failed to auto-publish community analysis",
+      );
+    }
+
+    logger.info({ ticker: company.ticker }, "Watchlist valuation updated");
+    return { ticker: company.ticker, status: "ok" };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error({ err, ticker: company.ticker }, "Watchlist valuation failed");
+
+    await db.insert(watchlistValuationsTable).values({
+      companyId: company.id,
+      ticker: company.ticker,
+      status: "error",
+      errorMessage: message,
+    });
+
+    return { ticker: company.ticker, status: "error", error_message: message };
+  }
+}
+
+/**
+ * Refreshes every company on the watchlist: see processCompany above for the
+ * per-company logic. Each company is isolated (errors inside processCompany
+ * are caught there), so one bad ticker doesn't stop the rest of the run.
+ */
+export async function runWatchlistUpdate(): Promise<WatchlistJobResultItem[]> {
+  const companies = await db.select().from(watchlistCompaniesTable);
+  const results: WatchlistJobResultItem[] = [];
+
+  for (const company of companies) {
+    results.push(await processCompany(company));
+
+    // Gentle delay between tickers to avoid hitting Yahoo Finance rate limits.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+
+  return results;
+}
