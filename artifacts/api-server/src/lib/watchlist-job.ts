@@ -1,1 +1,137 @@
-aW1wb3J0IGNyeXB0byBmcm9tICJjcnlwdG8iOwppbXBvcnQgeyBlcSB9IGZyb20gImRyaXp6bGUtb3JtIjsKaW1wb3J0IHsKICBkYiwKICB3YXRjaGxpc3RDb21wYW5pZXNUYWJsZSwKICB3YXRjaGxpc3RWYWx1YXRpb25zVGFibGUsCiAgYW5hbHlzZXNUYWJsZSwKfSBmcm9tICJAd29ya3NwYWNlL2RiIjsKaW1wb3J0IHsgZmV0Y2hNYXJrZXREYXRhLCBmZXRjaEluc2lkZXJEYXRhLCB0eXBlIE1hcmtldERhdGEgfSBmcm9tICIuL21hcmtldC1kYXRhIjsKaW1wb3J0IHsgY2FsY3VsYXRlRGNmLCB0eXBlIERjZlJlc3VsdCB9IGZyb20gIi4vdmFsdWF0aW9uIjsKaW1wb3J0IHsgbG9nZ2VyIH0gZnJvbSAiLi9sb2dnZXIiOwoKZXhwb3J0IGludGVyZmFjZSBXYXRjaGxpc3RKb2JSZXN1bHRJdGVtIHsKICB0aWNrZXI6IHN0cmluZzsKICBzdGF0dXM6ICJvayIgfCAiZXJyb3IiOwogIGVycm9yX21lc3NhZ2U/OiBzdHJpbmc7Cn0KCi8qKgogKiBQdWJsaXNoZXMgKG9yIHVwZGF0ZXMsIGlmIGFscmVhZHkgcHVibGlzaGVkKSB0aGUgY29tbXVuaXR5ICJhbmFseXNpcyIKICogY2FyZCBmb3IgYSB3YXRjaGxpc3QgY29tcGFueSwgc28gdmlzaXRvcnMgc2VlIGZyZXNoIHdlZWtseSBEQ0YgbnVtYmVycwogKiBvbiB0aGUgcHVibGljIHNpdGUgd2l0aG91dCBhbiBhZG1pbiBtYW51YWxseSBydW5uaW5nIHRoZSBjYWxjdWxhdG9yLgogKiBVc2VzIGEgcmFuZG9tLCBuZXZlci1zaGFyZWQgZWRpdCBQSU4gc28gdGhlIHB1YmxpYyBQQVRDSC9ERUxFVEUKICogZW5kcG9pbnRzICh3aGljaCByZXF1aXJlIGEgUElOKSBjYW4ndCBiZSB1c2VkIHRvIHRhbXBlciB3aXRoIGl0LgogKi8KYXN5bmMgZnVuY3Rpb24gcHVibGlzaE9yVXBkYXRlQW5hbHlzaXMoCiAgY29tcGFueTogdHlwZW9mIHdhdGNobGlzdENvbXBhbmllc1RhYmxlLiRpbmZlclNlbGVjdCwKICBtYXJrZXQ6IE1hcmtldERhdGEsCiAgZGNmOiBEY2ZSZXN1bHQsCiAgaW5zaWRlclNjb3JlOiBudW1iZXIsKTogUHJvbWlzZTxudW1iZXIgfCBudWxsPiB7CiAgaWYgKCFjb21wYW55LmF1dG9QdWJsaXNoKSByZXR1cm4gY29tcGFueS5wdWJsaXNoZWRBbmFseXNpc0lkOwoKICBjb25zdCB0aXRsZSA9IGAke2NvbXBhbnkuY29tcGFueU5hbWUgPz8gY29tcGFueS50aWNrZXJ9ICgke2NvbXBhbnkudGlja2VyfSkgXHUyMDE0IEF1dG8gRENGYDsKICBjb25zdCBub3RlcyA9CiAgICBgQXV0b21hdGlzayBnZW5lcmVydCBhdiBTaWV2b28gc2luIHVrZW50bGlnIG92ZXJ2XHUwMGU1a2luZ3Nqb2JiIChZYWhvbyBGaW5hbmNlLWRhdGEpLiBgICsKICAgIGBJbnNpZGVyLXNjb3JlOiAke2luc2lkZXJTY29yZX0vMTAwLiBTaXN0IG9wcGRhdGVydDogJHtuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkuc2xpY2UoMCwgMTApfS5gOwoKICBjb25zdCBmdWxsSW5wdXRzID0gewogICAgaW5wdXRzOiB7CiAgICAgIHJmOiBjb21wYW55LnJpc2tGcmVlUmF0ZSwKICAgICAgYmV0YTogbWFya2V0LmJldGEsCiAgICAgIHJtOiBjb21wYW55Lm1hcmtldFJldHVybiwKICAgICAgZTogbWFya2V0LnByaWNlICogbWFya2V0LnNoYXJlcywKICAgICAgZDogbWFya2V0LmRlYnRUb3RhbCwKICAgICAgcmQ6IGNvbXBhbnkuY29zdE9mRGVidCwKICAgICAgdGM6IGNvbXBhbnkudGF4UmF0ZSwKICAgICAgYmFzZVJldjogbWFya2V0LnJldmVudWUsCiAgICAgIHJldkdyb3d0aDogbWFya2V0LnJldkdyb3d0aCwKICAgICAgZmNmTWFyZ2luOiBtYXJrZXQuZmNmTWFyZ2luLAogICAgICBjdXNoaW9uOiBjb21wYW55LmN1c2hpb24sCiAgICAgIHByb2plY3Rpb25ZZWFyczogY29tcGFueS5wcm9qZWN0aW9uWWVhcnMsCiAgICAgIHR2TWV0aG9kOiAicGVycGV0dWl0eSIsCiAgICAgIGc6IGNvbXBhbnkudGVybWluYWxHcm93dGgsCiAgICAgIGViaXRkYU11bHRpcGxlOiAxNSwKICAgICAgZWJpdGRhWTU6IDAsCiAgICAgIGNhc2g6IG1hcmtldC5jYXNoLAogICAgICBkZWJ0VG90YWw6IG1hcmtldC5kZWJ0VG90YWwsCiAgICAgIHNoYXJlczogbWFya2V0LnNoYXJlcywKICAgICAgY3VycmVudFByaWNlOiBtYXJrZXQucHJpY2UsCiAgICAgIHdBY3R1YWw6IDAsCiAgICB9LAogICAgZ2F0ZXM6IHsgbW9hdDogZmFsc2UsIGNlbzogZmFsc2UgfSwKICAgIHNjb3JlczogeyBpbnNpZGVyOiBpbnNpZGVyU2NvcmUsIHRoZXNpczogNTAgfSwKICB9OwoKICBjb25zdCB2YWx1ZXMgPSB7CiAgICB0aXRsZSwKICAgIHRpY2tlcjogY29tcGFueS50aWNrZXIsCiAgICBjdXJyZW50UHJpY2U6IG1hcmtldC5wcmljZSwKICAgIGJhc2VEY2Y6IGRjZi5iYXNlLAogICAgYmVhckRjZjogZGNmLmJlYXIsCiAgICBidWxsRGNmOiBkY2YuYnVsbCwKICAgIG1hcmdpbk9mU2FmZXR5OiBkY2YubWFyZ2luT2ZTYWZldHksCiAgICBwcm9qZWN0aW9uWWVhcnM6IGNvbXBhbnkucHJvamVjdGlvblllYXJzLAogICAgdXNlck5vdGVzOiBub3RlcywKICAgIGZ1bGxJbnB1dHNKc29uOiBKU09OLnN0cmluZ2lmeShmdWxsSW5wdXRzKSwKICAgIGF1dGhvckFsaWFzOiAiU2lldm9vIEF1dG8tRENGIiwKICB9OwoKICBpZiAoY29tcGFueS5wdWJsaXNoZWRBbmFseXNpc0lkKSB7CiAgICBjb25zdCBbdXBkYXRlZF0gPSBhd2FpdCBkYgogICAgICAudXBkYXRlKGFuYWx5c2VzVGFibGUpCiAgICAgIC5zZXQodmFsdWVzKQogICAgICAud2hlcmUoZXEoYW5hbHlzZXNUYWJsZS5pZCwgY29tcGFueS5wdWJsaXNoZWRBbmFseXNpc0lkKSkKICAgICAgLnJldHVybmluZyh7IGlkOiBhbmFseXNlc1RhYmxlLmlkIH0pOwoKICAgIGlmICh1cGRhdGVkKSByZXR1cm4gdXBkYXRlZC5pZDsKICAgIC8vIExpbmtlZCBhbmFseXNpcyB3YXMgZGVsZXRlZCBlbHNld2hlcmUgKGUuZy4gbWFudWFsbHkgaW4gYWRtaW4pIFx1MjAxNCBmYWxsCiAgICAvLyB0aHJvdWdoIGFuZCBjcmVhdGUgYSBmcmVzaCBvbmUgYmVsb3cgaW5zdGVhZCBvZiBlcnJvcmluZyB0aGUgcnVuLgogIH0KCiAgY29uc3QgZWRpdFBpbiA9IGNyeXB0by5yYW5kb21CeXRlcygxNikudG9TdHJpbmcoImhleCIpOwogIGNvbnN0IFtjcmVhdGVkXSA9IGF3YWl0IGRiCiAgICAuaW5zZXJ0KGFuYWx5c2VzVGFibGUpCiAgICAudmFsdWVzKHsgLi4udmFsdWVzLCBlZGl0UGluLCBsaWtlc0NvdW50OiAwIH0pCiAgICAucmV0dXJuaW5nKHsgaWQ6IGFuYWx5c2VzVGFibGUuaWQgfSk7CgogIGlmIChjcmVhdGVkKSB7CiAgICBhd2FpdCBkYgogICAgICAudXBkYXRlKHdhdGNobGlzdENvbXBhbmllc1RhYmxlKQogICAgICAuc2V0KHsgcHVibGlzaGVkQW5hbHlzaXNJZDogY3JlYXRlZC5pZCB9KQogICAgICAud2hlcmUoZXEod2F0Y2hsaXN0Q29tcGFuaWVzVGFibGUuaWQsIGNvbXBhbnkuaWQpKTsKICAgIHJldHVybiBjcmVhdGVkLmlkOwogIH0KCiAgcmV0dXJuIG51bGw7Cn0KCi8qKgogKiBSZWZyZXNoZXMgYSBzaW5nbGUgd2F0Y2hsaXN0IGNvbXBhbnk6IGZldGNoZXMgcHJpY2UgKyBmdW5kYW1lbnRhbHMgZnJvbQogKiBZYWhvbyBGaW5hbmNlLCBydW5zIHRoZSBiZWFyL2Jhc2UvYnVsbCBEQ0YsIHN0b3JlcyBhIHNuYXBzaG90LCBhbmQKICogKGlmIGF1dG8tcHVibGlzaCBpcyBvbikgdXBkYXRlcyBpdHMgcHVibGljIGNvbW11bml0eSBhbmFseXNpcyBjYXJkLgogKiBTaGFyZWQgYnkgYm90aCB0aGUgd2Vla2x5IHdhdGNobGlzdC13b3JrZXIgKGV2ZXJ5IGNvbXBhbnkpIGFuZCB0aGUgZGFpbHkKICogdHJlbmRpbmctd29ya2VyIChqdXN0LWFkZGVkIHRyZW5kaW5nIHRpY2tlcnMpLgogKi8KZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIHByb2Nlc3NDb21wYW55KAogIGNvbXBhbnk6IHR5cGVvZiB3YXRjaGxpc3RDb21wYW5pZXNUYWJsZS4kaW5mZXJTZWxlY3QsKTogUHJvbWlzZTxXYXRjaGxpc3RKb2JSZXN1bHRJdGVtPiB7CiAgdHJ5IHsKICAgIGNvbnN0IG1hcmtldCA9IGF3YWl0IGZldGNoTWFya2V0RGF0YShjb21wYW55LnRpY2tlcik7CgogICAgLy8gSW5zaWRlciBkYXRhIGlzbid0IGF2YWlsYWJsZSBmb3IgZXZlcnkgdGlja2VyIChlc3AuIHNtYWxsZXIvbm9uLVVTCiAgICAvLyBsaXN0aW5ncyksIHNvIGEgZmFpbHVyZSBoZXJlIGZhbGxzIGJhY2sgdG8gYSBuZXV0cmFsIHNjb3JlIGluc3RlYWQKICAgIC8vIG9mIGZhaWxpbmcgdGhlIHdob2xlIGNvbXBhbnkncyB2YWx1YXRpb24uCiAgICBsZXQgaW5zaWRlclNjb3JlID0gNTA7CiAgICBsZXQgaW5zaWRlclRyYW5zYWN0aW9uc0pzb246IHN0cmluZyB8IG51bGwgPSBudWxsOwogICAgdHJ5IHsKICAgICAgY29uc3QgaW5zaWRlciA9IGF3YWl0IGZldGNoSW5zaWRlckRhdGEoY29tcGFueS50aWNrZXIpOwogICAgICBpbnNpZGVyU2NvcmUgPSBpbnNpZGVyLnNjb3JlOwogICAgICBpbnNpZGVyVHJhbnNhY3Rpb25zSnNvbiA9IEpTT04uc3RyaW5naWZ5KGluc2lkZXIudHJhbnNhY3Rpb25zKTsKICAgIH0gY2F0Y2ggKGluc2lkZXJFcnIpIHsKICAgICAgbG9nZ2VyLndhcm4oCiAgICAgICAgeyBlcnI6IGluc2lkZXJFcnIsIHRpY2tlcjogY29tcGFueS50aWNrZXIgfSwKICAgICAgICAiSW5zaWRlciBkYXRhIHVuYXZhaWxhYmxlLCB1c2luZyBuZXV0cmFsIHNjb3JlIiwKICAgICAgKTsKICAgIH0KCiAgICBjb25zdCBkY2YgPSBjYWxjdWxhdGVEY2Yoewo=…
+import crypto from "crypto";
+import { eq } from "drizzle-orm";
+import {
+  db,
+  watchlistCompaniesTable,
+  watchlistValuationsTable,
+  analysesTable,
+} from "@workspace/db";
+import { fetchMarketData, fetchInsiderData, type MarketData } from "./market-data";
+import { calculateDcf, type DcfResult } from "./valuation";
+import { logger } from "./logger";
+
+export interface WatchlistJobResultItem {
+  ticker: string;
+  status: "ok" | "error";
+  error_message?: string;
+}
+
+/**
+ * Publishes (or updates, if already published) the community "analysis"
+ * card for a watchlist company, so visitors see fresh weekly DCF numbers
+ * on the public site without an admin manually running the calculator.
+ * Uses a random, never-shared edit PIN so the public PATCH/DELETE
+ * endpoints (which require a PIN) can't be used to tamper with it.
+ */
+async function publishOrUpdateAnalysis(
+  company: typeof watchlistCompaniesTable.$inferSelect,
+  market: MarketData,
+  dcf: DcfResult,
+  insiderScore: number,): Promise<number | null> {
+  if (!company.autoPublish) return company.publishedAnalysisId;
+
+  const title = `${company.companyName ?? company.ticker} (${company.ticker}) \u2014 Auto DCF`;
+  const notes =
+    `Automatisk generert av Sievoo sin ukentlig overv\u00e5kingsjobb (Yahoo Finance-data). ` +
+    `Insider-score: ${insiderScore}/100. Sist oppdatert: ${new Date().toISOString().slice(0, 10)}.`;
+
+  const fullInputs = {
+    inputs: {
+      rf: company.riskFreeRate,
+      beta: market.beta,
+      rm: company.marketReturn,
+      e: market.price * market.shares,
+      d: market.debtTotal,
+      rd: company.costOfDebt,
+      tc: company.taxRate,
+      baseRev: market.revenue,
+      revGrowth: market.revGrowth,
+      fcfMargin: market.fcfMargin,
+      cushion: company.cushion,
+      projectionYears: company.projectionYears,
+      tvMethod: "perpetuity",
+      g: company.terminalGrowth,
+      ebitdaMultiple: 15,
+      ebitdaY5: 0,
+      cash: market.cash,
+      debtTotal: market.debtTotal,
+      shares: market.shares,
+      currentPrice: market.price,
+      wActual: 0,
+    },
+    gates: { moat: false, ceo: false },
+    scores: { insider: insiderScore, thesis: 50 },
+  };
+
+  const values = {
+    title,
+    ticker: company.ticker,
+    currentPrice: market.price,
+    baseDcf: dcf.base,
+    bearDcf: dcf.bear,
+    bullDcf: dcf.bull,
+    marginOfSafety: dcf.marginOfSafety,
+    projectionYears: company.projectionYears,
+    userNotes: notes,
+    fullInputsJson: JSON.stringify(fullInputs),
+    authorAlias: "Sievoo Auto-DCF",
+  };
+
+  if (company.publishedAnalysisId) {
+    const [updated] = await db
+      .update(analysesTable)
+      .set(values)
+      .where(eq(analysesTable.id, company.publishedAnalysisId))
+      .returning({ id: analysesTable.id });
+
+    if (updated) return updated.id;
+    // Linked analysis was deleted elsewhere (e.g. manually in admin) \u2014 fall
+    // through and create a fresh one below instead of erroring the run.
+  }
+
+  const editPin = crypto.randomBytes(16).toString("hex");
+  const [created] = await db
+    .insert(analysesTable)
+    .values({ ...values, editPin, likesCount: 0 })
+    .returning({ id: analysesTable.id });
+
+  if (created) {
+    await db
+      .update(watchlistCompaniesTable)
+      .set({ publishedAnalysisId: created.id })
+      .where(eq(watchlistCompaniesTable.id, company.id));
+    return created.id;
+  }
+
+  return null;
+}
+
+/**
+ * Refreshes a single watchlist company: fetches price + fundamentals from
+ * Yahoo Finance, runs the bear/base/bull DCF, stores a snapshot, and
+ * (if auto-publish is on) updates its public community analysis card.
+ * Shared by both the weekly watchlist-worker (every company) and the daily
+ * trending-worker (just-added trending tickers).
+ */
+export async function processCompany(
+  company: typeof watchlistCompaniesTable.$inferSelect,): Promise<WatchlistJobResultItem> {
+  try {
+    const market = await fetchMarketData(company.ticker);
+
+    // Insider data isn't available for every ticker (esp. smaller/non-US
+    // listings), so a failure here falls back to a neutral score instead
+    // of failing the whole company's valuation.
+    let insiderScore = 50;
+    let insiderTransactionsJson: string | null = null;
+    try {
+      const insider = await fetchInsiderData(company.ticker);
+      insiderScore = insider.score;
+      insiderTransactionsJson = JSON.stringify(insider.transactions);
+    } catch (insiderErr) {
+      logger.warn(
+        { err: insiderErr, ticker: company.ticker },
+        "Insider data unavailable, using neutral score",
+      );
+    }
+
+    const dcf = calculateDcf({
