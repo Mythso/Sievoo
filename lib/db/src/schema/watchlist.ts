@@ -15,6 +15,9 @@ export const watchlistCompaniesTable = pgTable("watchlist_companies", {
   ticker: text("ticker").notNull().unique(),
   companyName: text("company_name"),
   notes: text("notes"),
+  // "admin" = added manually via the admin panel, "trending" = auto-added
+  // by the daily trending-worker (Yahoo Finance trending tickers).
+  source: text("source").notNull().default("admin"),
   projectionYears: integer("projection_years").notNull().default(5),
   riskFreeRate: real("risk_free_rate").notNull().default(4.5),
   marketReturn: real("market_return").notNull().default(10.0),
@@ -24,7 +27,7 @@ export const watchlistCompaniesTable = pgTable("watchlist_companies", {
   cushion: real("cushion").notNull().default(10.0),
   publishedAnalysisId: integer("published_analysis_id").references(
     () => analysesTable.id,
-    { onDelete: "set null" },
+    { onDelete:"set null" },
   ),
   autoPublish: integer("auto_publish").notNull().default(1),
   addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
