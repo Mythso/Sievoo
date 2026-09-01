@@ -12,8 +12,15 @@ let cachedCookie: string | null = null;
 let cachedCrumb: string | null = null;
 let cacheExpiresAt = 0;
 
-async function getCookieAndCrumb(): Promise<{ cookie: string; crumb: string }> {
-  if (cachedCookie && cachedCrumb && Date.now() < cacheExpiresAt) {
+async function getCookieAndCrumb(
+  forceRefresh = false,
+): Promise<{ cookie: string; crumb: string }> {
+  if (
+    !forceRefresh &&
+    cachedCookie &&
+    cachedCrumb &&
+    Date.now() < cacheExpiresAt
+  ) {
     return { cookie: cachedCookie, crumb: cachedCrumb };
   }
 
@@ -41,6 +48,59 @@ async function getCookieAndCrumb(): Promise<{ cookie: string; crumb: string }> {
   return { cookie, crumb };
 }
 
+/**
+ * Fetches a Yahoo Finance quoteSummary payload for the given ticker/modules,
+ * retrying once with a freshly-fetched cookie/crumb if the first attempt
+ * fails. Yahoo occasionally rejects requests mid-session (stale/invalidated
+ * crumb, or a transient block) even though the cached cookie/crumb pair is
+ * still within its 30-minute window - a single retry with a forced-fresh
+ * cookie/crumb recovers from this without failing the whole run.
+ */
+async function fetchYahooQuoteSummary(
+  ticker: string,
+  modules: string,
+): Promise<any> {
+  let lastErr: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { cookie, crumb } = await getCookieAndCrumb(attempt > 0);
+
+      const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
+        ticker,
+      )}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
+
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT, Cookie: cookie },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Yahoo Finance request failed for ${ticker}: ${res.status}`);
+      }
+
+      const json = (await res.json()) as any;
+      const result = json?.quoteSummary?.result?.[0];
+      if (!result) {
+        const errDesc = json?.quoteSummary?.error?.description;
+        throw new Error(errDesc || `No data returned from Yahoo Finance for ${ticker}`);
+      }
+
+      return result;
+    } catch (err) {
+      lastErr = err;
+      // Force a fresh cookie/crumb on the next attempt, since a stale or
+      // invalidated crumb is the most common cause of a mid-session failure.
+      cachedCookie = null;
+      cachedCrumb = null;
+      cacheExpiresAt = 0;
+    }
+  }
+
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`Yahoo Finance request failed for ${ticker}`);
+}
+
 export interface MarketData {
   ticker: string;
   price: number;
@@ -54,27 +114,8 @@ export interface MarketData {
 }
 
 export async function fetchMarketData(ticker: string): Promise<MarketData> {
-  const { cookie, crumb } = await getCookieAndCrumb();
-
   const modules = "defaultKeyStatistics,financialData";
-  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
-    ticker,
-  )}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
-
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Cookie: cookie },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Yahoo Finance request failed for ${ticker}: ${res.status}`);
-  }
-
-  const json = (await res.json()) as any;
-  const result = json?.quoteSummary?.result?.[0];
-  if (!result) {
-    const errDesc = json?.quoteSummary?.error?.description;
-    throw new Error(errDesc || `No data returned from Yahoo Finance for ${ticker}`);
-  }
+  const result = await fetchYahooQuoteSummary(ticker, modules);
 
   const stats = result.defaultKeyStatistics ?? {};
   const fin = result.financialData ?? {};
@@ -98,7 +139,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
   return { ticker, price, shares, beta, cash, debtTotal, revenue, revGrowth, fcfMargin };
 }
 
-// ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Insider trading data (meldepliktig handel)
 // ---------------------------------------------------------------------------
 
@@ -176,24 +217,12 @@ function computeInsiderScore(
  * for the ticker (common for smaller / non-US listings).
  */
 export async function fetchInsiderData(ticker: string): Promise<InsiderData> {
-  const { cookie, crumb } = await getCookieAndCrumb();
-
   const modules = "insiderTransactions,netSharePurchaseActivity";
-  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
-    ticker,
-  )}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
 
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Cookie: cookie },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Yahoo Finance insider request failed for ${ticker}: ${res.status}`);
-  }
-
-  const json = (await res.json()) as any;
-  const result = json?.quoteSummary?.result?.[0];
-  if (!result) {
+  let result: any;
+  try {
+    result = await fetchYahooQuoteSummary(ticker, modules);
+  } catch {
     // No insider module coverage for this ticker; treat as neutral rather than failing the whole run.
     return { score: 50, netPercentInsiderShares: null, buyCount: 0, sellCount: 0, transactions: [] };
   }
@@ -211,7 +240,6 @@ export async function fetchInsiderData(ticker: string): Promise<InsiderData> {
   };
 }
 
-
 // ---------------------------------------------------------------------------
 // Ticker -> company name lookup (used for auto-filling company name fields)
 // ---------------------------------------------------------------------------
@@ -227,22 +255,8 @@ export interface TickerLookupResult {
  * has no name on file, so callers can fall back gracefully.
  */
 export async function lookupTicker(ticker: string): Promise<TickerLookupResult> {
-  const { cookie, crumb } = await getCookieAndCrumb();
-
-  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
-    ticker,
-  )}?modules=price&crumb=${encodeURIComponent(crumb)}`;
-
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Cookie: cookie },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Yahoo Finance lookup failed for ${ticker}: ${res.status}`);
-  }
-
-  const json = (await res.json()) as any;
-  const price = json?.quoteSummary?.result?.[0]?.price;
+  const result = await fetchYahooQuoteSummary(ticker, "price");
+  const price = result.price;
   const companyName: string | null = price?.longName ?? price?.shortName ?? null;
 
   return { ticker: ticker.toUpperCase(), companyName };
