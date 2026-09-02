@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BookOpen, TrendingUp, Calculator, Shield } from 'lucide-react';
+import { BookOpen, TrendingUp, Calculator, Shield, Scale, Waves, UserCheck, Search } from 'lucide-react';
 
 const articles = [
   {
@@ -30,6 +30,34 @@ const articles = [
     description: 'Qualitative analysis meets quantitative hurdles. Why software companies trade differently and how to spot a crumbling competitive advantage.',
     icon: BookOpen,
     color: 'text-destructive'
+  },
+  {
+    slug: 'margin-of-safety',
+    title: 'Margin of Safety: Benjamin Graham\'s Central Principle',
+    description: 'The single most important idea in value investing. Why buying below intrinsic value is the only real protection against being wrong.',
+    icon: Scale,
+    color: 'text-emerald-400'
+  },
+  {
+    slug: 'mr-market',
+    title: 'Mr. Market: Why the Market Is Your Servant, Not Your Guide',
+    description: 'Benjamin Graham\'s famous allegory for market psychology. How to use volatility as an opportunity instead of a source of anxiety.',
+    icon: Waves,
+    color: 'text-cyan-400'
+  },
+  {
+    slug: 'defensive-vs-enterprising',
+    title: 'Defensive vs. Enterprising Investor: Choosing Your Approach',
+    description: 'Graham split investors into two camps based on time and temperament. Find out which one actually matches how you invest.',
+    icon: UserCheck,
+    color: 'text-purple-400'
+  },
+  {
+    slug: 'graham-number',
+    title: 'The Graham Number: A Quick Screen for Undervalued Stocks',
+    description: 'A simple formula combining earnings and book value to flag statistically cheap stocks, plus Graham\'s seven-point defensive checklist.',
+    icon: Search,
+    color: 'text-amber-400'
   }
 ];
 
