@@ -12,7 +12,7 @@ const contentMap: Record<string, { title: string, body: string[] }> = {
       "<p>While multiples (P/E, EV/EBITDA) tell you what the market is paying <em>relative to peers</em>, a DCF attempts to tell you what the business is actually <em>worth</em> in absolute terms.</p>",
       "<h3>Weighted Average Cost of Capital (WACC)</h3>",
       "<p>Cash tomorrow is worth less than cash today. WACC is the discount rate used to bring future cash flows back to present value. It blends the cost of equity (expected return by shareholders) and the after-tax cost of debt.</p>",
-      "<pre>WACC = (E/V × Re) + (D/V × Rd × (1 - Tc))</pre>",
+      "<pre>WACC = (E/V× Re) + (D/V × Rd × (1 - Tc))</pre>",
       "<p>The Cost of Equity (Re) is typically calculated using the Capital Asset Pricing Model (CAPM):</p>",
       "<pre>Re = Risk Free Rate + Beta × (Market Return - Risk Free Rate)</pre>",
       "<p>Beta measures volatility. A Beta of 1.2 means the stock is 20% more volatile than the market. Higher risk demands a higher expected return, which increases the discount rate and lowers the present value.</p>",
@@ -77,6 +77,72 @@ const contentMap: Record<string, { title: string, body: string[] }> = {
       "<p>A company growing at 50% with a -10% margin passes. A company growing at 20% with a 20% margin passes. It is a quick heuristic to ensure growth isn't being purchased at unsustainable costs.</p>",
       "<h3>Skin in the Game</h3>",
       "<p>Management behavior is often more predictive than management guidance. We look for 'Skin in the Game'—founder-led companies or massive insider ownership. More importantly, we track open market purchases. As Peter Lynch noted: 'Insiders might sell their shares for any number of reasons, but they buy them for only one: they think the price will go up.'</p>"
+    ]
+  },
+  'margin-of-safety': {
+    title: "Margin of Safety: Benjamin Graham's Central Principle",
+    body: [
+      "<h2>The Idea That Makes Value Investing Work</h2>",
+      "<p>Benjamin Graham, widely regarded as the father of value investing, argued that a rational investor's entire discipline can be reduced to a single phrase: margin of safety. The concept is simple to state and hard to practice. Never pay a price for an asset that leaves no cushion between what you paid and what the asset is actually worth.</p>",
+      "<p>Every valuation model, including the DCF calculator on Sievoo, is an estimate built on assumptions about the future. Growth rates, margins, and discount rates can all be wrong. A margin of safety is not a way to guarantee you are right—it is a way to survive being wrong.</p>",
+      "<h3>Price Is What You Pay, Value Is What You Get</h3>",
+      "<p>Graham drew a sharp line between price and value. Price is set minute-to-minute by the collective mood of the market. Value is a function of a business's assets, earnings power, and future cash flows. The two can diverge wildly and for long stretches of time, which is precisely what creates opportunity for a patient investor.</p>",
+      "<p>Buying only when price sits meaningfully below your estimate of value builds in room for estimation error, bad luck, and unforeseen competitive threats—the things that DCF models by construction cannot fully capture.</p>",
+      "[AD_ZONE]",
+      "<h3>How Much Margin Is Enough?</h3>",
+      "<p>Graham did not prescribe one fixed number, but he consistently favored discounts wide enough to absorb the ordinary bumps of business life. A common rule of thumb used by modern value investors is to require intrinsic value to exceed the current price by at least 20-30%, and more for smaller or less predictable businesses.</p>",
+      "<pre>Margin of Safety = (Intrinsic Value − Price) / Intrinsic Value</pre>",
+      "<p>On Sievoo, this is exactly what the Safety Margin Cushion input on the DCF calculator is designed to do: it deliberately understates projected cash flows so the resulting fair value already carries a built-in buffer, rather than asking you to remember to discount the sticker price afterward.</p>",
+      "<h3>Margin of Safety Is Not Diversification</h3>",
+      "<p>It is worth distinguishing margin of safety from diversification. Diversification manages the risk that any single position will hurt you badly; margin of safety manages the risk that your analysis of any single position is simply wrong. A concentrated portfolio of businesses bought with a genuine margin of safety can be far less risky, in Graham's sense of permanent capital loss, than a diversified basket of overpriced ones.</p>"
+    ]
+  },
+  'mr-market': {
+    title: 'Mr. Market: Why the Market Is Your Servant, Not Your Guide',
+    body: [
+      "<h2>An Allegory for Market Psychology</h2>",
+      "<p>Benjamin Graham illustrated the emotional nature of markets with a simple story. Imagine you own a stake in a private business alongside a business partner named Mr. Market. Every single day, without fail, Mr. Market shows up at your door and offers to either buy your stake or sell you his, always naming a price.</p>",
+      "<p>Some days Mr. Market is euphoric and names a price far above what the business is reasonably worth. Other days he is despondent and offers to sell his stake for far less than it is worth. Crucially, Mr. Market does not mind being ignored—if you have nothing to say to him today, he will simply return tomorrow with a new quote.</p>",
+      "<h3>The Market Exists to Serve You</h3>",
+      "<p>Graham's point was that Mr. Market's daily mood swings tell you nothing about what the underlying business is actually worth. His quotes are an opportunity, not an instruction. A rational investor is free to transact with him only when his price is attractive, and to ignore him entirely the rest of the time.</p>",
+      "<p>This reframes volatility. A falling share price in a business whose fundamentals are unchanged is not evidence you were wrong—it may simply be Mr. Market having a bad day, and therefore an invitation to buy more at a better margin of safety.</p>",
+      "[AD_ZONE]",
+      "<h3>When the Market's Opinion Does Matter</h3>",
+      "<p>Ignoring Mr. Market's mood does not mean ignoring the market entirely. Sustained price declines can occasionally reflect real, deteriorating business fundamentals—a widening competitive threat, a broken balance sheet, or a genuine change in the earnings outlook. The discipline is to keep re-checking your own independent estimate of value, and to update it when the facts change, rather than letting the daily quote itself become your estimate.</p>",
+      "<h3>Turning Volatility Into an Asset</h3>",
+      "<p>Investors who internalize the Mr. Market allegory tend to view volatility as a source of opportunity rather than a source of anxiety. Bear markets stop being purely a threat to net worth and start being a recurring sale on ownership stakes in good businesses, provided your independent valuation work was sound to begin with.</p>"
+    ]
+  },
+  'defensive-vs-enterprising': {
+    title: 'Defensive vs. Enterprising Investor: Choosing Your Approach',
+    body: [
+      "<h2>Two Honest Paths to Investing Well</h2>",
+      "<p>Benjamin Graham did not believe every investor should analyze individual businesses. Instead, he split investors into two legitimate categories based on the time, temperament, and effort they are realistically willing to commit, and argued that trying to be a halfhearted version of the more demanding approach was the most dangerous path of all.</p>",
+      "<h3>The Defensive Investor</h3>",
+      "<p>The defensive investor prioritizes safety and freedom from effort over the chance of outsized returns. Graham's guidance for this group centered on broad diversification, a sensible mix of stocks and bonds, and a preference for large, financially sound, established companies rather than speculative or complex situations.</p>",
+      "<p>In modern practice, the defensive approach maps closely onto low-cost index investing—owning the market broadly through funds rather than picking individual winners. Sievoo's Core-Satellite framework builds this directly into its Core allocation.</p>",
+      "[AD_ZONE]",
+      "<h3>The Enterprising Investor</h3>",
+      "<p>The enterprising investor is willing to devote real time and effort to research in exchange for the possibility of better-than-average returns. This path demands independent analysis of individual businesses, a willingness to act against prevailing sentiment when the numbers justify it, and enough emotional discipline to hold a position through periods when the market disagrees with you.</p>",
+      "<p>Graham was explicit that this path only pays off if it is done rigorously. An investor who does a little research but ultimately just follows tips or headlines gets neither the safety of the defensive approach nor the genuine edge of the enterprising one.</p>",
+      "<h3>Choosing Honestly</h3>",
+      "<p>The healthiest starting point is an honest assessment of how much time you will actually spend reading annual reports, tracking competitive dynamics, and revisiting your valuation assumptions. Sievoo's Satellite allocation exists for investors willing to do that work on a small number of high-conviction names, while the Core remains available to everyone regardless of how much research time they can commit.</p>"
+    ]
+  },
+  'graham-number': {
+    title: 'The Graham Number: A Quick Screen for Undervalued Stocks',
+    body: [
+      "<h2>A Fast, Conservative Sanity Check</h2>",
+      "<p>Long before discounted cash flow spreadsheets were common, Benjamin Graham looked for a simple formula that combined a company's earnings power and its balance sheet strength into a single conservative estimate of fair value. The result, now known as the Graham Number, is not meant to replace a full valuation—it is meant to flag names worth a closer look and to weed out names that are obviously expensive.</p>",
+      "<pre>Graham Number = √(22.5 × EPS × Book Value per Share)</pre>",
+      "<p>The constant 22.5 comes from multiplying two of Graham's other rules of thumb for defensive investors: a price-to-earnings ratio no greater than 15, and a price-to-book ratio no greater than 1.5 (15 × 1.5 = 22.5). A stock trading below its Graham Number is, by this conservative measure, statistically cheap relative to both its earnings and its net assets.</p>",
+      "<h3>Where It Works, and Where It Doesn't</h3>",
+      "<p>The formula was built with stable, asset-heavy, profitable businesses in mind—the kind that made up much of the market in Graham's era. It is far less useful for asset-light, high-growth, or currently unprofitable companies, where book value understates the real economic engine and a low P/E may simply be a red flag rather than a bargain. Use it as a first filter for mature, profitable businesses, not as a universal ranking tool.</p>",
+      "[AD_ZONE]",
+      "<h3>Graham's Seven Criteria for Defensive Investors</h3>",
+      "<p>Graham paired the Graham Number with a broader checklist for defensive investors screening individual stocks. In modern, approximate form, the criteria are:</p>",
+      "<ul><li><strong>Adequate size:</strong> A substantial, established company rather than a micro-cap.</li><li><strong>Strong financial condition:</strong> Current assets at least twice current liabilities.</li><li><strong>Earnings stability:</strong> Positive earnings in each of the past ten years.</li><li><strong>Dividend record:</strong> An uninterrupted history of dividend payments.</li><li><strong>Earnings growth:</strong> Meaningful growth in earnings per share over the past decade.</li><li><strong>Moderate P/E ratio:</strong> Current price no more than roughly 15 times average earnings.</li><li><strong>Moderate P/B ratio:</strong> Price no more than roughly 1.5 times book value, or P/E × P/B no greater than 22.5.</li></ul>",
+      "<p>Try the interactive version of both the Graham Number and this checklist on the Graham Calculator, and use it alongside the DCF calculator rather than in place of it—a stock that clears both a conservative asset-based screen and a forward-looking cash flow model is a much stronger candidate than one that only clears one of the two.</p>"
     ]
   }
 };
