@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const navItemsEn = [
   { label: 'Home', href: '/' },
   { label: 'Calculator', href: '/calculator' },
+  { label: 'Graham Calculator', href: '/graham-calculator' },
   { label: 'FIRE', href: '/fire' },
   { label: 'Portfolio', href: '/portfolio' },
   { label: 'Academy', href: '/academy' },
@@ -17,6 +18,7 @@ const navItemsEn = [
 const navItemsNo = [
   { label: 'Hjem', href: '/' },
   { label: 'Kalkulator', href: '/calculator' },
+  { label: 'Graham-kalkulator', href: '/graham-calculator' },
   { label: 'FIRE', href: '/fire' },
   { label: 'Portefølje', href: '/portfolio' },
   { label: 'Akademi', href: '/academy' },
