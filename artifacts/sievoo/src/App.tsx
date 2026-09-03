@@ -14,6 +14,7 @@ import { Layout } from '@/components/Layout';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
 import Calculator from '@/pages/Calculator';
+import GrahamCalculator from '@/pages/GrahamCalculator';
 import Fire from '@/pages/Fire';
 import Portfolio from '@/pages/Portfolio';
 import Academy from '@/pages/Academy';
@@ -38,6 +39,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/calculator" component={Calculator} />
+          <Route path="/graham-calculator" component={GrahamCalculator} />
           <Route path="/fire" component={Fire} />
           <Route path="/portfolio" component={Portfolio} />
           <Route path="/academy" component={Academy} />
