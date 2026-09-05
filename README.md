@@ -1,8 +1,8 @@
 # Sievoo — The Intelligent Quality Sieve for Investors
 
-> **DCF valuation engine · Portfolio allocation formula · Watchlist with automated weekly valuations · FIRE calculator · Investment community feed · Educational academy**
+> **DCF valuation engine · Graham Number & Defensive Investor screen · Portfolio allocation formula · Watchlist with automated DCF + Graham valuations · FIRE calculator · Investment community feed · Educational academy**
 
-Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven investors. It stress-tests stocks through a rigorous DCF methodology, applies a master allocation formula, keeps a watchlist of followed companies up to date automatically, and hosts a public community where investors share fully transparent analyses — no narratives, only math.
+Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven investors. It stress-tests stocks through a rigorous DCF methodology, screens them through Benjamin Graham's value-investing criteria, applies a master allocation formula, keeps a watchlist of followed companies up to date automatically (including auto-discovering trending tickers), and hosts a public community where investors share fully transparent analyses — no narratives, only math.
 
 ---
 
@@ -24,15 +24,24 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - HTML5 Canvas share card export (PNG)
 - Save/load analyses as JSON, publish to community feed
 
+### Graham Calculator
+- **Graham Number** = √(22.5 × EPS × Book Value per Share), with margin-of-safety vs. current price
+- **7-point Defensive Investor checklist** (Graham's conservative screen: size, financial strength, earnings stability, dividend record, earnings growth, P/E cap, P/B cap)
+- **NCAV net-net screener** for deep-value situations
+- Paired with four Academy articles: Margin of Safety, Mr. Market, Defensive vs. Enterprising Investor, and the Graham Number itself
+
 ### Watchlist
-- Admin picks tickers to follow; a scheduled weekly job keeps each one up to date automatically
-- Per run: fetches current price and fundamentals (revenue, revenue growth, FCF margin, beta, cash, debt, shares outstanding), then computes a fresh Bear/Base/Bull DCF using the same math as the manual calculator
+- Admin picks tickers to follow; a scheduled weekly job (**AutoDCF**) keeps each one up to date automatically. A separate daily job auto-discovers Yahoo Finance's trending US tickers and onboards new ones immediately
+- Per run: fetches current price and fundamentals (revenue, revenue growth, FCF margin, beta, cash, debt, shares outstanding, trailing EPS, book value per share), then computes:
+  - A fresh Bear/Base/Bull **DCF** (AutoDCF) using the same math as the manual calculator
+  - A **Graham Number** (AutoValue) using the same math as the Graham Calculator — nullable when a ticker has no positive trailing EPS or book value
 - **Company name auto-fill**: type a ticker in the admin form and the company name is looked up and filled in automatically (still editable) — the server also fills it in if the request omits it
 - **Insider score (0–100)**: derived from recent insider buying/selling activity for the ticker; 50 = neutral, higher = net insider buying. Falls back to neutral when no insider data is available for a given ticker rather than failing the run
 - Each company's DCF assumptions (risk-free rate, market return, cost of debt, tax rate, terminal growth, cushion, projection years) are individually configurable, with sensible defaults
 - One bad ticker never blocks the rest of the run — failures are isolated and logged per company
-- Optional **auto-publish**: keeps a single community analysis card per company up to date in place (no duplicate posts) so visitors always see the latest numbers without manual work
+- Optional **auto-publish**: keeps a single community analysis card per company up to date in place (no duplicate posts), including the latest Graham number in the notes, so visitors always see the latest numbers without manual work
 - Manual "Refresh now" trigger available from the admin panel for on-demand runs
+- **Valuation history**: every run is stored as its own row rather than overwriting the last one, so price, DCF, and Graham Number can be tracked over years and checked against what actually happened (see Statistics tab below)
 
 ### Community Feed
 - Browse published analyses sorted by newest / most liked / highest margin of safety
@@ -58,6 +67,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - Password-protected at `/admin` (not linked anywhere in the UI)
 - Manage contact form inbox, change admin password
 - Manage the watchlist: add/remove companies, view latest valuation + insider activity per company, toggle auto-publish, trigger manual refreshes
+- **Statistics tab**: pick a followed company and see a chart of its stock price plotted against every past AutoDCF (Base case) and AutoValue (Graham Number) run, by date — built to be checked back on in a few years to see which valuation method called it right
 - SHA-256 + salt hashing, session token stored in DB
 
 ### Internationalisation
@@ -89,15 +99,16 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 ├── artifacts/
 │   ├── sievoo/                    # React frontend  (@workspace/sievoo)
 │   │   ├── src/
-│   │   │   ├── pages/        # Home, Calculator, FIRE, Portfolio, Academy, Admin, Contact …
+│   │   │   ├── pages/        # Home, Calculator, GrahamCalculator, FIRE, Portfolio, Academy, Admin, Contact …
 │   │   │   ├── components/   # SievooLogo, AnalysisCard, Navbar, Footer …
 │   │   │   └── hooks/
 │   │   └── index.html        # Analytics tag lives here
 │   ├── api-server/                # Express API     (@workspace/api-server)
 │   │   └── src/
 │   │       ├── routes/       # analyses, comments, contact, admin, watchlist, ticker
-│   │       ├── lib/          # market-data (price/fundamentals/insider fetch), valuation (DCF math), watchlist-job
-│   │       └── watchlist-worker.ts   # standalone entrypoint for the scheduled watchlist job
+│   │       ├── lib/          # market-data (price/fundamentals/insider/trending fetch), valuation (DCF + Graham math), watchlist-job, trending-job
+│   │       ├── watchlist-worker.ts   # standalone entrypoint for the scheduled AutoDCF/AutoValue job (weekly)
+│   │       └── trending-worker.ts    # standalone entrypoint for the daily trending-ticker discovery job
 │   └── mockup-sandbox/            # Internal component preview server
 ├── lib/
 │   ├── api-spec/              # openapi.yaml  → single source of truth for API contracts
@@ -110,7 +121,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 │           ├── comments.ts
 │           ├── contact_messages.ts
 │           ├── admin_config.ts
-│           └── watchlist.ts   # watchlist_companies + watchlist_valuations
+│           └── watchlist.ts   # watchlist_companies + watchlist_valuations (incl. Graham/AutoValue columns)
 ├── scripts/                       # Post-merge setup scripts
 ├── package.json                   # Monorepo root
 ├── pnpm-workspace.yaml
@@ -205,6 +216,7 @@ All routes are prefixed with `/api`.
 | `POST` | `/api/admin/watchlist` | Add a company to the watchlist (auth required) |
 | `DELETE` | `/api/admin/watchlist/:id` | Remove a company from the watchlist (auth required) |
 | `POST` | `/api/admin/watchlist/refresh` | Manually trigger a watchlist refresh run (auth required) |
+| `GET` | `/api/admin/watchlist/:id/history` | Get a company's full AutoDCF/AutoValue run history for the Statistics tab (auth required) |
 | `GET` | `/api/ticker-lookup` | Look up a company name from a ticker (public, used for auto-fill) |
 | `POST` | `/api/contact` | Submit contact form (rate-limited: 5 req/hr per IP) |
 | `POST` | `/api/admin/auth` | Admin login (rate-limited: 10 attempts/15 min) |
@@ -225,17 +237,20 @@ Admin endpoints require the `x-admin-token` header. Default admin password on fi
 - **In-memory rate limiting** (per process). Suitable for single-instance deployment; swap for Redis if multi-instance scaling is needed.
 - **Admin auth** uses SHA-256 + static salt for password hashing and a random session token stored in the DB, passed via the `x-admin-token` header.
 - **Watchlist data source**: current price, fundamentals, and insider activity are fetched from a public, no-API-key market data feed. Since this feed is unofficial, per-ticker failures are caught and logged individually rather than failing the whole run, and insider data falls back to a neutral score when unavailable for a given ticker.
+- **AutoValue rides the same job as AutoDCF.** Rather than a separate cron service, the Graham Number is computed inside the same `processCompany()` call that runs the DCF, from the same market-data fetch. This means it automatically runs on both the weekly `watchlist-worker` and the daily `trending-worker` schedules with no extra Yahoo Finance calls or moving parts.
+- **Valuation history is append-only.** Each `watchlist-job` run inserts a new `watchlist_valuations` row rather than updating the previous one, which is what makes the Statistics tab's multi-year price-vs-DCF-vs-Graham chart possible without a separate history table.
 - **Cron worker env vars**: `watchlist-worker` runs on a schedule rather than continuously, and reference variables (e.g. `DATABASE_URL` pointing at `${{Postgres.DATABASE_URL}}`) only resolve reliably starting from the deployment where they were set — setting a variable on the service is not enough by itself, it also needs a redeploy (not just a scheduled cron run) to take effect.
 
 ---
 
 ## Deployment
 
-The project runs as two always-on services plus one scheduled job, all deployed from this monorepo:
+The project runs as two always-on services plus two scheduled jobs, all deployed from this monorepo:
 
 1. **`sievoo-web`** — builds and serves the frontend (`pnpm --filter @workspace/sievoo run build`)
 2. **`api-server`** — builds and runs the Express API (`pnpm --filter @workspace/api-server run build` / `run start`), with `pnpm --filter @workspace/db run push-force` applied as a pre-deploy step so schema changes roll out automatically
-3. **`watchlist-worker`** — same codebase as `api-server`, deployed as a separate service with its own entrypoint (`run start:watchlist-worker`) and a weekly cron schedule instead of a continuous process
+3. **`watchlist-worker`** — same codebase as `api-server`, deployed as a separate service with its own entrypoint (`run start:watchlist-worker`) and a weekly cron schedule (Mondays 06:00 UTC) instead of a continuous process. Runs AutoDCF + AutoValue for every followed company.
+4. **`trending-worker`** — same codebase again, its own entrypoint (`run start:trending-worker`), daily cron schedule (05:00 UTC). Discovers trending US tickers from Yahoo Finance, onboards new ones, and runs AutoDCF + AutoValue on them immediately via the same `processCompany()` job as above.
 
 For other platforms:
 
@@ -243,6 +258,16 @@ For other platforms:
 2. Serve the API: `node --enable-source-maps artifacts/api-server/dist/index.mjs`
 3. Serve the frontend: build output in `artifacts/sievoo/dist/` — serve as static files behind the same domain or a CDN
 4. Run the watchlist job on a schedule: `node --enable-source-maps artifacts/api-server/dist/watchlist-worker.mjs`
+5. Run the trending discovery job on a schedule: `node --enable-source-maps artifacts/api-server/dist/trending-worker.mjs`
+
+---
+
+## Roadmap
+
+- Confirm `watchlist-worker` and `trending-worker` pick up the new Graham/AutoValue columns cleanly on their next scheduled runs (schema change ships via `push-force` on the next `api-server` deploy)
+- Let a few weeks of AutoDCF/AutoValue history accumulate, then revisit the Statistics tab to sanity-check the price-vs-valuation chart against real names
+- Potential expansion of Academy content and calculator tooling around Graham/value-investing themes
+- Possible follow-up: surface a lightweight "DCF vs. Graham vs. actual price" accuracy summary once enough history exists (e.g. average error over 1/3/5-year windows)
 
 ---
 
