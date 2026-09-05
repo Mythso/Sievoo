@@ -26,6 +26,11 @@ export const WatchlistValuationSnapshot = zod.object({
   "base_dcf": zod.number().nullish(),
   "bull_dcf": zod.number().nullish(),
   "margin_of_safety": zod.number().nullish(),
+  // AutoValue (Graham Number), computed alongside AutoDCF.
+  "eps": zod.number().nullish(),
+  "book_value_per_share": zod.number().nullish(),
+  "graham_number": zod.number().nullish(),
+  "graham_margin_of_safety": zod.number().nullish(),
   "insider_score": zod.number().nullish(),
   "insider_transactions": zod.array(InsiderTransactionItem).nullish(),
   "status": zod.enum(['ok', 'error']),
@@ -101,6 +106,35 @@ export const RefreshWatchlistResponse = zod.object({
   "results": zod.array(RefreshWatchlistResultItem)
 });
 
+
+/**
+ * @summary Get the valuation history for a watchlist company (admin, for the Statistics tab)
+ */
+export const WatchlistHistoryParams = zod.object({
+  "id": zod.coerce.number()
+});
+
+export const WatchlistHistoryHeader = zod.object({
+  "x-admin-token": zod.string()
+});
+
+export const WatchlistHistoryPoint = zod.object({
+  "computed_at": zod.string(),
+  "price": zod.number().nullish(),
+  "bear_dcf": zod.number().nullish(),
+  "base_dcf": zod.number().nullish(),
+  "bull_dcf": zod.number().nullish(),
+  "margin_of_safety": zod.number().nullish(),
+  "graham_number": zod.number().nullish(),
+  "graham_margin_of_safety": zod.number().nullish()
+});
+
+export const WatchlistHistoryResponse = zod.object({
+  "id": zod.number(),
+  "ticker": zod.string(),
+  "company_name": zod.string().nullish(),
+  "points": zod.array(WatchlistHistoryPoint)
+});
 
 /**
  * @summary Look up a company name from a ticker (public)
