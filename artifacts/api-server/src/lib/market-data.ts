@@ -111,6 +111,11 @@ export interface MarketData {
   revenue: number;
   revGrowth: number;
   fcfMargin: number;
+  // AutoValue (Graham Number) inputs - not guaranteed for every ticker
+  // (e.g. unprofitable companies have no meaningful trailing EPS), so these
+  // are nullable rather than required like the DCF inputs above.
+  eps: number | null;
+  bookValuePerShare: number | null;
 }
 
 export async function fetchMarketData(ticker: string): Promise<MarketData> {
@@ -131,12 +136,26 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
   const operatingMargin: number = (fin.operatingMargins?.raw ?? 0) * 100;
   const fcfMargin: number =
     revenue && freeCashflow ? (freeCashflow / revenue) * 100 : operatingMargin;
+  const eps: number | null = stats.trailingEps?.raw ?? null;
+  const bookValuePerShare: number | null = stats.bookValue?.raw ?? null;
 
   if (!price || !shares || !revenue) {
     throw new Error(`Incomplete data returned from Yahoo Finance for ${ticker}`);
   }
 
-  return { ticker, price, shares, beta, cash, debtTotal, revenue, revGrowth, fcfMargin };
+  return {
+    ticker,
+    price,
+    shares,
+    beta,
+    cash,
+    debtTotal,
+    revenue,
+    revGrowth,
+    fcfMargin,
+    eps,
+    bookValuePerShare,
+  };
 }
 
 // ---------------------------------------------------------------------------
