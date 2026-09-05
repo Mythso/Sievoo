@@ -3,3 +3,4 @@ export * from "./comments";
 export * from "./contact_messages";
 export * from "./admin_config";
 export * from "./watchlist";
+export * from "./users";
