@@ -5,12 +5,23 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldAlert, Trash2, CheckCircle2, Lock, Inbox, LineChart, RefreshCw, Plus, ExternalLink } from 'lucide-react';
+import { ShieldAlert, Trash2, CheckCircle2, Lock, Inbox, LineChart, TrendingUp, RefreshCw, Plus, ExternalLink } from 'lucide-react';
 import { useAdminAuth, useListAdminMessages, useUpdateAdminMessage, useDeleteAdminMessage, useUpdateAdminPassword } from '@workspace/api-client-react';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListAdminMessagesQueryKey } from '@workspace/api-client-react';
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 export default function Admin() {
   const { toast } = useToast();
@@ -138,6 +149,7 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
         <TabsList className="bg-muted border border-border">
           <TabsTrigger value="messages" className="font-mono uppercase text-xs tracking-wider"><Inbox className="w-4 h-4 mr-2"/> Inbox</TabsTrigger>
           <TabsTrigger value="watchlist" className="font-mono uppercase text-xs tracking-wider"><LineChart className="w-4 h-4 mr-2"/> Watchlist</TabsTrigger>
+          <TabsTrigger value="statistics" className="font-mono uppercase text-xs tracking-wider"><TrendingUp className="w-4 h-4 mr-2"/> Statistics</TabsTrigger>
           <TabsTrigger value="security" className="font-mono uppercase text-xs tracking-wider"><Lock className="w-4 h-4 mr-2"/> Security</TabsTrigger>
         </TabsList>
 
@@ -202,6 +214,10 @@ function AdminDashboard({ token, onLogout }: { token: string, onLogout: () => vo
 
         <TabsContent value="watchlist" className="mt-6">
           <WatchlistTab token={token} />
+        </TabsContent>
+
+        <TabsContent value="statistics" className="mt-6">
+          <StatisticsTab token={token} />
         </TabsContent>
 
         <TabsContent value="security" className="mt-6">
@@ -539,6 +555,178 @@ function WatchlistTab({ token }: { token: string }) {
               {isAdding ? 'Adding...' : 'Add to Watchlist'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface WatchlistHistoryPoint {
+  computed_at: string;
+  price: number | null;
+  bear_dcf: number | null;
+  base_dcf: number | null;
+  bull_dcf: number | null;
+  margin_of_safety: number | null;
+  graham_number: number | null;
+  graham_margin_of_safety: number | null;
+}
+
+interface WatchlistHistoryData {
+  id: number;
+  ticker: string;
+  company_name: string | null;
+  points: WatchlistHistoryPoint[];
+}
+
+interface StatisticsCompanyOption {
+  id: number;
+  ticker: string;
+  company_name: string | null;
+}
+
+/**
+ * "Statistikk" tab: for a chosen watchlist company, plots every past
+ * AutoDCF + AutoValue (Graham) run against the actual stock price on the
+ * date it ran. Since every run is stored as its own row (never overwritten),
+ * this lets you come back in a few years and see whether the DCF or the
+ * Graham Number ended up closer to reality.
+ */
+function StatisticsTab({ token }: { token: string }) {
+  const { toast } = useToast();
+  const [companies, setCompanies] = useState<StatisticsCompanyOption[]>([]);
+  const [selectedId, setSelectedId] = useState<string>('');
+  const [history, setHistory] = useState<WatchlistHistoryData | null>(null);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setIsLoadingCompanies(true);
+      try {
+        const res = await fetch('/api/watchlist');
+        if (!res.ok) throw new Error('Failed to load watchlist');
+        const data = await res.json();
+        const items: StatisticsCompanyOption[] = data.items.map((c: any) => ({
+          id: c.id,
+          ticker: c.ticker,
+          company_name: c.company_name,
+        }));
+        setCompanies(items);
+        if (items.length > 0) setSelectedId(String(items[0].id));
+      } catch {
+        toast({ title: 'Error', description: 'Could not load company list.', variant: 'destructive' });
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    (async () => {
+      setIsLoadingHistory(true);
+      setHistory(null);
+      try {
+        const res = await fetch(`/api/admin/watchlist/${selectedId}/history`, {
+          headers: { 'x-admin-token': token },
+        });
+        if (!res.ok) throw new Error('Failed to load history');
+        const data: WatchlistHistoryData = await res.json();
+        setHistory(data);
+      } catch {
+        toast({ title: 'Error', description: 'Could not load valuation history.', variant: 'destructive' });
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    })();
+  }, [selectedId, token]);
+
+  const chartData = (history?.points ?? []).map((p) => ({
+    date: format(new Date(p.computed_at), 'MMM d, yyyy'),
+    fullDate: p.computed_at,
+    Price: p.price,
+    'AutoDCF (Base)': p.base_dcf,
+    'AutoValue (Graham)': p.graham_number,
+  }));
+
+  const selected = companies.find((c) => String(c.id) === selectedId);
+  const latest = history?.points[history.points.length - 1];
+
+  return (
+    <div className="space-y-6">
+      <Card className="bg-card border-border shadow-xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 flex-wrap gap-4">
+          <div>
+            <CardTitle>Valuation History</CardTitle>
+            <CardDescription>
+              Price on the day each AutoDCF / AutoValue run fired, plotted against that run's DCF and
+              Graham Number — so you can come back later and see which one called it right.
+            </CardDescription>
+          </div>
+          <Select value={selectedId} onValueChange={setSelectedId} disabled={isLoadingCompanies || companies.length === 0}>
+            <SelectTrigger className="w-[220px] font-mono text-xs bg-input">
+              <SelectValue placeholder={isLoadingCompanies ? 'Loading...' : 'Select a company'} />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)} className="font-mono text-xs">
+                  {c.ticker}{c.company_name ? ` \u2014 ${c.company_name}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {isLoadingHistory ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">Loading history...</div>
+          ) : !history || history.points.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              No completed runs yet for {selected?.ticker ?? 'this company'}. Numbers appear here after the
+              next scheduled AutoDCF/AutoValue run, or a manual refresh from the Watchlist tab.
+            </div>
+          ) : (
+            <>
+              <div className="h-[380px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${v}`} />
+                    <Tooltip
+                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
+                      formatter={(value: number) => (value == null ? '\u2014' : `$${value.toFixed(2)}`)}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="Price" stroke="#e5e7eb" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                    <Line type="monotone" dataKey="AutoDCF (Base)" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                    <Line type="monotone" dataKey="AutoValue (Graham)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {latest && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 mt-6 border-t border-border">
+                  <div className="bg-background rounded-lg border border-border p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Latest Price</p>
+                    <p className="text-lg font-bold font-mono">{latest.price != null ? `$${latest.price.toFixed(2)}` : '\u2014'}</p>
+                  </div>
+                  <div className="bg-background rounded-lg border border-border p-3 text-center">
+                    <p className="text-xs text-muted-foreground">AutoDCF (Base)</p>
+                    <p className="text-lg font-bold font-mono text-emerald-400">{latest.base_dcf != null ? `$${latest.base_dcf.toFixed(2)}` : '\u2014'}</p>
+                  </div>
+                  <div className="bg-background rounded-lg border border-border p-3 text-center">
+                    <p className="text-xs text-muted-foreground">AutoValue (Graham)</p>
+                    <p className="text-lg font-bold font-mono text-amber-400">{latest.graham_number != null ? `$${latest.graham_number.toFixed(2)}` : '\u2014'}</p>
+                  </div>
+                  <div className="bg-background rounded-lg border border-border p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Runs Recorded</p>
+                    <p className="text-lg font-bold font-mono">{history.points.length}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
