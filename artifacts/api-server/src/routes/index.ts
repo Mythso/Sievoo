@@ -6,6 +6,7 @@ import contactRouter from "./contact";
 import adminRouter from "./admin";
 import watchlistRouter from "./watchlist";
 import tickerRouter from "./ticker";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(contactRouter);
 router.use(adminRouter);
 router.use(watchlistRouter);
 router.use(tickerRouter);
+router.use(authRouter);
 
 export default router;
