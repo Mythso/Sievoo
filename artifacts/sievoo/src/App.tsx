@@ -21,6 +21,7 @@ import Academy from '@/pages/Academy';
 import Article from '@/pages/Article';
 import Contact from '@/pages/Contact';
 import Admin from '@/pages/Admin';
+import Account from '@/pages/Account';
 import Legal from '@/pages/Legal';
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ function Router() {
           <Route path="/academy/:slug" component={Article} />
           <Route path="/contact" component={Contact} />
           <Route path="/admin" component={Admin} />
+          <Route path="/account" component={Account} />
           <Route path="/privacy">
             {() => <Legal page="privacy" />}
           </Route>
