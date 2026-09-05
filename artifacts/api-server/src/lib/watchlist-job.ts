@@ -7,7 +7,7 @@ import {
   analysesTable,
 } from "@workspace/db";
 import { fetchMarketData, fetchInsiderData, type MarketData } from "./market-data";
-import { calculateDcf, type DcfResult } from "./valuation";
+import { calculateDcf, calculateGraham, type DcfResult, type GrahamResult } from "./valuation";
 import { logger } from "./logger";
 
 export interface WatchlistJobResultItem {
@@ -27,13 +27,18 @@ async function publishOrUpdateAnalysis(
   company: typeof watchlistCompaniesTable.$inferSelect,
   market: MarketData,
   dcf: DcfResult,
+  graham: GrahamResult,
   insiderScore: number,): Promise<number | null> {
   if (!company.autoPublish) return company.publishedAnalysisId;
 
   const title = `${company.companyName ?? company.ticker} (${company.ticker}) \u2014 Auto DCF`;
+  const grahamNote =
+    graham.grahamNumber != null
+      ? ` Graham-tall (AutoValue): $${graham.grahamNumber.toFixed(2)}.`
+      : "";
   const notes =
     `Automatisk generert av Sievoo sin ukentlig overv\u00e5kingsjobb (Yahoo Finance-data). ` +
-    `Insider-score: ${insiderScore}/100. Sist oppdatert: ${new Date().toISOString().slice(0, 10)}.`;
+    `Insider-score: ${insiderScore}/100.${grahamNote} Sist oppdatert: ${new Date().toISOString().slice(0, 10)}.`;
 
   const fullInputs = {
     inputs: {
@@ -154,6 +159,14 @@ export async function processCompany(
       currentPrice: market.price,
     });
 
+    // AutoValue: Graham Number, computed the same way and on the same
+    // schedule as AutoDCF above, from the same market data fetch.
+    const graham = calculateGraham({
+      eps: market.eps ?? 0,
+      bookValuePerShare: market.bookValuePerShare ?? 0,
+      currentPrice: market.price,
+    });
+
     await db.insert(watchlistValuationsTable).values({
       companyId: company.id,
       ticker: company.ticker,
@@ -170,14 +183,18 @@ export async function processCompany(
       baseDcf: dcf.base,
       bullDcf: dcf.bull,
       marginOfSafety: dcf.marginOfSafety,
+      eps: market.eps,
+      bookValuePerShare: market.bookValuePerShare,
+      grahamNumber: graham.grahamNumber,
+      grahamMarginOfSafety: graham.marginOfSafety,
       insiderScore,
       insiderTransactionsJson,
-      rawJson: JSON.stringify({ market, dcf }),
+      rawJson: JSON.stringify({ market, dcf, graham }),
       status: "ok",
     });
 
     try {
-      await publishOrUpdateAnalysis(company, market, dcf, insiderScore);
+      await publishOrUpdateAnalysis(company, market, dcf, graham, insiderScore);
     } catch (publishErr) {
       logger.warn(
         { err: publishErr, ticker: company.ticker },
