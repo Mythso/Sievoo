@@ -79,3 +79,38 @@ export function calculateDcf(inputs: DcfInputs): DcfResult {
 
   return { wacc, bear, base, bull, marginOfSafety };
 }
+
+/**
+ * Server-side re-implementation of the Graham Number math from
+ * artifacts/sievoo/src/pages/GrahamCalculator.tsx, so the watchlist job's
+ * "AutoValue" pass can compute it without a browser - the same way
+ * calculateDcf above powers "AutoDCF". Keep this in sync if the Graham
+ * calculator's formula ever changes.
+ *
+ * Graham Number = sqrt(22.5 x EPS x Book Value per Share)
+ * Returns nulls (rather than NaN/0) when eps or book value aren't
+ * positive, since the formula is undefined/meaningless in that case -
+ * common for unprofitable or asset-light companies.
+ */
+export interface GrahamInputs {
+  eps: number; // trailing twelve-month EPS
+  bookValuePerShare: number;
+  currentPrice: number;
+}
+
+export interface GrahamResult {
+  grahamNumber: number | null;
+  marginOfSafety: number | null; // (grahamNumber - price) / grahamNumber * 100
+}
+
+export function calculateGraham(inputs: GrahamInputs): GrahamResult {
+  if (!(inputs.eps > 0) || !(inputs.bookValuePerShare > 0)) {
+    return { grahamNumber: null, marginOfSafety: null };
+  }
+
+  const grahamNumber = Math.sqrt(22.5 * inputs.eps * inputs.bookValuePerShare);
+  const marginOfSafety =
+    inputs.currentPrice > 0 ? ((grahamNumber - inputs.currentPrice) / grahamNumber) * 100 : null;
+
+  return { grahamNumber, marginOfSafety };
+}
