@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Menu, X, Globe } from 'lucide-react';
+import { Menu, X, Globe, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SievooLogo } from './SievooLogo';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -67,6 +67,13 @@ export function Navbar() {
         </div>
         
         <div className="flex items-center gap-4">
+          <Link href="/account">
+            <Button variant="ghost" size="icon" className="h-9 w-9 px-0" data-testid="btn-account">
+              <UserCircle className="h-4 w-4" />
+              <span className="sr-only">Account</span>
+            </Button>
+          </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9 px-0" data-testid="btn-language">
