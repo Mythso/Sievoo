@@ -11,6 +11,7 @@ const navItemsEn = [
   { label: 'Graham Calculator', href: '/graham-calculator' },
   { label: 'FIRE', href: '/fire' },
   { label: 'Portfolio', href: '/portfolio' },
+  { label: 'Watchlist', href: '/watchlist' },
   { label: 'Academy', href: '/academy' },
   { label: 'Contact', href: '/contact' },
 ];
@@ -21,6 +22,7 @@ const navItemsNo = [
   { label: 'Graham-kalkulator', href: '/graham-calculator' },
   { label: 'FIRE', href: '/fire' },
   { label: 'Portefølje', href: '/portfolio' },
+  { label: 'Overvåkningsliste', href: '/watchlist' },
   { label: 'Akademi', href: '/academy' },
   { label: 'Kontakt', href: '/contact' },
 ];
