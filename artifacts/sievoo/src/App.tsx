@@ -17,6 +17,7 @@ import Calculator from '@/pages/Calculator';
 import GrahamCalculator from '@/pages/GrahamCalculator';
 import Fire from '@/pages/Fire';
 import Portfolio from '@/pages/Portfolio';
+import Watchlist from '@/pages/Watchlist';
 import Academy from '@/pages/Academy';
 import Article from '@/pages/Article';
 import Contact from '@/pages/Contact';
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/graham-calculator" component={GrahamCalculator} />
           <Route path="/fire" component={Fire} />
           <Route path="/portfolio" component={Portfolio} />
+          <Route path="/watchlist" component={Watchlist} />
           <Route path="/academy" component={Academy} />
           <Route path="/academy/:slug" component={Article} />
           <Route path="/contact" component={Contact} />
