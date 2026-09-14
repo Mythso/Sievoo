@@ -61,6 +61,51 @@ function toApiValuation(row: typeof watchlistValuationsTable.$inferSelect) {
   };
 }
 
+// Shared by both the admin and public history endpoints - every past
+// AutoDCF/AutoValue run for one company, oldest first, so price vs. DCF vs.
+// Graham Number can be plotted over time. Capped so a long-followed ticker
+// can't return an unbounded payload. Returns null if the company doesn't
+// exist.
+const MAX_HISTORY_POINTS = 500;
+
+async function loadWatchlistHistory(companyId: number) {
+  const [company] = await db
+    .select()
+    .from(watchlistCompaniesTable)
+    .where(eq(watchlistCompaniesTable.id, companyId));
+
+  if (!company) return null;
+
+  const rows = await db
+    .select()
+    .from(watchlistValuationsTable)
+    .where(eq(watchlistValuationsTable.companyId, company.id))
+    .orderBy(watchlistValuationsTable.computedAt);
+
+  // Only successful runs have numbers worth plotting; failed runs (e.g. a
+  // transient Yahoo Finance outage) are skipped rather than showing as gaps.
+  const points = rows
+    .filter((r) => r.status === "ok")
+    .slice(-MAX_HISTORY_POINTS)
+    .map((r) => ({
+      computed_at: r.computedAt.toISOString(),
+      price: r.price,
+      bear_dcf: r.bearDcf,
+      base_dcf: r.baseDcf,
+      bull_dcf: r.bullDcf,
+      margin_of_safety: r.marginOfSafety,
+      graham_number: r.grahamNumber,
+      graham_margin_of_safety: r.grahamMarginOfSafety,
+    }));
+
+  return {
+    id: company.id,
+    ticker: company.ticker,
+    company_name: company.companyName,
+    points,
+  };
+}
+
 // Public: list followed companies with their latest valuation snapshot.
 router.get("/watchlist", async (_req, res): Promise<void> => {
   const companies = await db
@@ -94,6 +139,26 @@ router.get("/watchlist", async (_req, res): Promise<void> => {
   });
 
   res.json(ListWatchlistResponse.parse({ items }));
+});
+
+// Public: full valuation history for one watchlist company - every past
+// AutoDCF/AutoValue run, oldest first, so visitors can see price vs. DCF vs.
+// Graham Number plotted over time for any followed ticker. Same data and
+// shape as the admin Statistics tab, just without the admin-only gate.
+router.get("/watchlist/:id/history", async (req, res): Promise<void> => {
+  const params = WatchlistHistoryParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const history = await loadWatchlistHistory(params.data.id);
+  if (!history) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+
+  res.json(WatchlistHistoryResponse.parse(history));
 });
 
 // Admin: add a company to the watchlist.
@@ -187,11 +252,8 @@ router.delete("/admin/watchlist/:id", async (req, res): Promise<void> => {
 });
 
 // Admin: full valuation history for one company, for the Statistics tab -
-// every past AutoDCF/AutoValue run, oldest first, so price vs. DCF vs.
-// Graham Number can be plotted over time and checked against reality years
-// later. Capped so a long-followed ticker can't return an unbounded payload.
-const MAX_HISTORY_POINTS = 500;
-
+// same data as the public history endpoint above, gated behind admin auth
+// for parity with the rest of the admin console.
 router.get("/admin/watchlist/:id/history", async (req, res): Promise<void> => {
   const headers = WatchlistHistoryHeader.safeParse({
     "x-admin-token": req.headers["x-admin-token"],
@@ -207,46 +269,13 @@ router.get("/admin/watchlist/:id/history", async (req, res): Promise<void> => {
     return;
   }
 
-  const [company] = await db
-    .select()
-    .from(watchlistCompaniesTable)
-    .where(eq(watchlistCompaniesTable.id, params.data.id));
-
-  if (!company) {
+  const history = await loadWatchlistHistory(params.data.id);
+  if (!history) {
     res.status(404).json({ error: "Company not found" });
     return;
   }
 
-  const rows = await db
-    .select()
-    .from(watchlistValuationsTable)
-    .where(eq(watchlistValuationsTable.companyId, company.id))
-    .orderBy(watchlistValuationsTable.computedAt);
-
-  // Only successful runs have numbers worth plotting; failed runs (e.g. a
-  // transient Yahoo Finance outage) are skipped rather than showing as gaps.
-  const points = rows
-    .filter((r) => r.status === "ok")
-    .slice(-MAX_HISTORY_POINTS)
-    .map((r) => ({
-      computed_at: r.computedAt.toISOString(),
-      price: r.price,
-      bear_dcf: r.bearDcf,
-      base_dcf: r.baseDcf,
-      bull_dcf: r.bullDcf,
-      margin_of_safety: r.marginOfSafety,
-      graham_number: r.grahamNumber,
-      graham_margin_of_safety: r.grahamMarginOfSafety,
-    }));
-
-  res.json(
-    WatchlistHistoryResponse.parse({
-      id: company.id,
-      ticker: company.ticker,
-      company_name: company.companyName,
-      points,
-    }),
-  );
+  res.json(WatchlistHistoryResponse.parse(history));
 });
 
 // Admin: manually trigger a refresh run (same job the weekly cron worker runs).
