@@ -42,6 +42,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - Optional **auto-publish**: keeps a single community analysis card per company up to date in place (no duplicate posts), including the latest Graham number in the notes, so visitors always see the latest numbers without manual work
 - Manual "Refresh now" trigger available from the admin panel for on-demand runs
 - **Valuation history**: every run is stored as its own row rather than overwriting the last one, so price, DCF, and Graham Number can be tracked over years and checked against what actually happened (see Statistics tab below)
+- **Public History tab**: the `/watchlist` page's History tab is open to any visitor — pick a followed ticker and see the same price-vs-AutoDCF-vs-AutoValue chart as the admin Statistics tab, backed by a public (unauthenticated) history endpoint
 
 ### Community Feed
 - Browse published analyses sorted by newest / most liked / highest margin of safety
@@ -213,6 +214,7 @@ All routes are prefixed with `/api`.
 | `GET` | `/api/analyses/:id/comments` | List comments |
 | `POST` | `/api/analyses/:id/comments` | Post a comment |
 | `GET` | `/api/watchlist` | List followed companies with their latest valuation |
+| `GET` | `/api/watchlist/:id/history` | Full AutoDCF/AutoValue/price history for one watchlist company (public, used by the Watchlist page's History tab) |
 | `POST` | `/api/admin/watchlist` | Add a company to the watchlist (auth required) |
 | `DELETE` | `/api/admin/watchlist/:id` | Remove a company from the watchlist (auth required) |
 | `POST` | `/api/admin/watchlist/refresh` | Manually trigger a watchlist refresh run (auth required) |
