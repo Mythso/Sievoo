@@ -75,7 +75,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - EN / NO language toggle, stored in `localStorage`
 
 ### SEO
-- `public/sitemap.xml` lists every public route and Academy article, and is referenced from `robots.txt` — **add new article slugs here when publishing**
+- `sitemap.xml` is generated at build time by `vite-plugin-sitemap.ts` from the routes in `App.tsx` and the Academy articles in `pages/Article.tsx`, so new pages are included automatically on the next deploy (`/admin`, `/account` and parameterised routes are skipped). It is referenced from `robots.txt`
 - `src/components/SeoHead.tsx` sets title, meta description, canonical URL, robots and Open Graph/Twitter tags per route (Academy articles get their title and first paragraph); `/admin`, `/account` and unknown routes are `noindex`
 - Static defaults (including the 1200×630 share image `public/og-image.png`) live in `index.html`, so link previews work for crawlers that don't run JavaScript
 

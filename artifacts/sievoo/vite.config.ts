@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
+import { sitemapPlugin } from './vite-plugin-sitemap';
+
 
 const rawPort = process.env.PORT;
 
@@ -46,6 +48,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    sitemapPlugin(path.resolve(import.meta.dirname, 'src')),
   ],
   resolve: {
     alias: {
