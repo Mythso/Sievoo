@@ -143,6 +143,8 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 
 Dark mode only, monospace font for all financial figures.
 
+**Favicon & app icons** live in `artifacts/sievoo/public/`: `favicon.svg` (master), `favicon.ico` (16/32/48), `favicon-48x48.png`, `apple-touch-icon.png` (180), `icon-192.png` / `icon-512.png` and `site.webmanifest`, all linked from `index.html`. Search engines need a crawlable icon whose size is a multiple of 48px, so keep the `.ico`/48px PNG in place when changing the logo.
+
 ---
 
 ## Getting Started
