@@ -11,6 +11,7 @@ import {
 } from 'wouter';
 
 import { Layout } from '@/components/Layout';
+import { SeoHead } from '@/components/SeoHead';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
 import Calculator from '@/pages/Calculator';
@@ -37,6 +38,7 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Layout>
+      <SeoHead />
       <RoutedErrorBoundary>
         <Switch>
           <Route path="/" component={Home} />

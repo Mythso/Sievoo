@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'wouter';
 
-const contentMap: Record<string, { title: string, body: string[] }> = {
+export const contentMap: Record<string, { title: string, body: string[] }> = {
   'dcf': {
     title: 'Understanding DCF Valuation: WACC, FCF & Terminal Value Explained',
     body: [

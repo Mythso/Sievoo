@@ -62,7 +62,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - Gap-to-target and estimated completion year
 
 ### Academy
-- Four SEO-optimised educational articles: DCF Fundamentals, Core-Satellite Strategy, The 4% Rule, Moats & Rule of 40
+- Eight educational articles: DCF Fundamentals, Core-Satellite Strategy, The 4% Rule, Moats & Rule of 40, Margin of Safety, Mr. Market, Defensive vs. Enterprising Investor, and The Graham Number
 
 ### Admin Console
 - Password-protected at `/admin` (not linked anywhere in the UI)
@@ -73,6 +73,11 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 
 ### Internationalisation
 - EN / NO language toggle, stored in `localStorage`
+
+### SEO
+- `public/sitemap.xml` lists every public route and Academy article, and is referenced from `robots.txt` — **add new article slugs here when publishing**
+- `src/components/SeoHead.tsx` sets title, meta description, canonical URL, robots and Open Graph/Twitter tags per route (Academy articles get their title and first paragraph); `/admin`, `/account` and unknown routes are `noindex`
+- Static defaults (including the 1200×630 share image `public/og-image.png`) live in `index.html`, so link previews work for crawlers that don't run JavaScript
 
 ---
 
