@@ -109,13 +109,12 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 │   │   │   ├── components/   # SievooLogo, AnalysisCard, Navbar, Footer …
 │   │   │   └── hooks/
 │   │   └── index.html        # Analytics tag lives here
-│   ├── api-server/                # Express API     (@workspace/api-server)
-│   │   └── src/
-│   │       ├── routes/       # analyses, comments, contact, admin, watchlist, ticker
-│   │       ├── lib/          # market-data (price/fundamentals/insider/trending fetch), valuation (DCF + Graham math), watchlist-job, trending-job
-│   │       ├── watchlist-worker.ts   # standalone entrypoint for the scheduled AutoDCF/AutoValue job (weekly)
-│   │       └── trending-worker.ts    # standalone entrypoint for the daily trending-ticker discovery job
-│   └── mockup-sandbox/            # Internal component preview server
+│   └── api-server/                # Express API     (@workspace/api-server)
+│       └── src/
+│           ├── routes/       # analyses, comments, contact, admin, watchlist, ticker
+│           ├── lib/          # market-data (price/fundamentals/insider/trending fetch), valuation (DCF + Graham math), watchlist-job, trending-job
+│           ├── watchlist-worker.ts   # standalone entrypoint for the scheduled AutoDCF/AutoValue job (weekly)
+│           └── trending-worker.ts    # standalone entrypoint for the daily trending-ticker discovery job
 ├── lib/
 │   ├── api-spec/              # openapi.yaml  → single source of truth for API contracts
 │   ├── api-client-react/      # Orval-generated React Query hooks (do not edit manually)
@@ -204,6 +203,8 @@ pnpm run build   # typecheck + build all packages
 ```bash
 pnpm --filter @workspace/api-spec run codegen
 ```
+
+Import generated hooks and schemas through the package barrels (`@workspace/api-client-react`, `@workspace/api-zod`) — never from their `src/generated/...` paths directly.
 
 ---
 
