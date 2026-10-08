@@ -77,6 +77,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 ### SEO
 - `sitemap.xml` is generated at build time by `vite-plugin-sitemap.ts` from the routes in `App.tsx` and the Academy articles in `pages/Article.tsx`, so new pages are included automatically on the next deploy (`/admin`, `/account` and parameterised routes are skipped). It is referenced from `robots.txt`
 - `src/components/SeoHead.tsx` sets title, meta description, canonical URL, robots and Open Graph/Twitter tags per route (Academy articles get their title and first paragraph); `/admin`, `/account` and unknown routes are `noindex`
+- **Adding a page:** add the `<Route>` in `App.tsx` and a matching entry in `ROUTE_META` in `SeoHead.tsx` (title + description) — the sitemap picks the route up automatically. New Academy articles only need their `contentMap` entry in `pages/Article.tsx`
 - Static defaults (including the 1200×630 share image `public/og-image.png`) live in `index.html`, so link previews work for crawlers that don't run JavaScript
 
 ---
@@ -269,6 +270,14 @@ For other platforms:
 3. Serve the frontend: build output in `artifacts/sievoo/dist/` — serve as static files behind the same domain or a CDN
 4. Run the watchlist job on a schedule: `node --enable-source-maps artifacts/api-server/dist/watchlist-worker.mjs`
 5. Run the trending discovery job on a schedule: `node --enable-source-maps artifacts/api-server/dist/trending-worker.mjs`
+
+### Domain & DNS
+
+DNS for `sievoo.com` is managed in Cloudflare:
+
+- `sievoo.com` — proxied CNAME to the `sievoo-web` Railway service
+- `www.sievoo.com` — proxied CNAME to `sievoo.com`; a Cloudflare redirect rule (`http_request_dynamic_redirect`) sends it to `https://sievoo.com` with a 301, keeping path and query string
+- TXT `_railway-verify` (Railway custom-domain verification) and TXT `google-site-verification` (Search Console) — **do not remove**
 
 ---
 
