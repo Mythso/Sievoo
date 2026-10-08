@@ -155,7 +155,7 @@ Dark mode only, monospace font for all financial figures.
 
 ### Prerequisites
 - Node.js 24+
-- pnpm 9+
+- pnpm 10 (pinned via `packageManager` in `package.json`; run `corepack enable` to use the exact version)
 - PostgreSQL database (connection string in `DATABASE_URL`)
 
 ### Install
@@ -174,7 +174,7 @@ pnpm install
 | `SESSION_SECRET` | ✅ | Secret for session signing |
 | `NODE_ENV` | — | `development` \| `production` |
 | `PORT` | — | Port for the API server |
-| `RAILPACK_INSTALL_CMD` | — | Install override (`pnpm install --no-frozen-lockfile`) to avoid lockfile mismatches on deploy |
+| `RAILPACK_INSTALL_CMD` | — | `pnpm install --frozen-lockfile` — builds fail if `pnpm-lock.yaml` is out of sync with `package.json`, so commit the lockfile after every dependency change |
 
 ### Database Setup
 
