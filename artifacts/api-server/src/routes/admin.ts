@@ -52,6 +52,19 @@ async function ensureAdminExists(): Promise<void> {
   const [existing] = await db.select().from(adminConfigTable).limit(1);
 
   if (existing) {
+    const resetPassword = process.env.ADMIN_RESET_PASSWORD;
+    if (resetPassword) {
+      if (resetPassword.length < 12) {
+        logger.error("ADMIN_RESET_PASSWORD must be at least 12 characters - admin password NOT reset");
+        return;
+      }
+      await db
+        .update(adminConfigTable)
+        .set({ passwordHash: createStoredPasswordHash(resetPassword), sessionToken: null })
+        .where(eq(adminConfigTable.id, existing.id));
+      logger.warn("Admin password reset from ADMIN_RESET_PASSWORD - remove the variable now");
+      return;
+    }
     if (!isStoredPasswordHash(existing.passwordHash) && safeEqual(existing.passwordHash, legacyHash(LEGACY_DEFAULT_PASSWORD))) {
       logger.warn("Admin is still using the old default password - change it in /admin immediately");
     }

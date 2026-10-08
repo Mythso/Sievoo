@@ -175,6 +175,7 @@ pnpm install
 | `NODE_ENV` | — | `development` \| `production` |
 | `PORT` | — | Port for the API server |
 | `ADMIN_INITIAL_PASSWORD` | — | Only used when no admin account exists yet; creates it with this password. Remove after first start |
+| `ADMIN_RESET_PASSWORD` | — | Break-glass reset: overwrites the existing admin password (min. 12 characters) and signs out all admin sessions on startup. Remove it right after logging in, or every restart resets the password again |
 | `RAILPACK_INSTALL_CMD` | — | `pnpm install --frozen-lockfile` — builds fail if `pnpm-lock.yaml` is out of sync with `package.json`, so commit the lockfile after every dependency change |
 
 ### Database Setup
