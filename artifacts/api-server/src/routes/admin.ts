@@ -18,36 +18,66 @@ import {
   UpdateAdminPasswordResponse,
 } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
+import {
+  createStoredPasswordHash,
+  generateSessionToken,
+  isStoredPasswordHash,
+  safeEqual,
+  verifyStoredPasswordHash,
+} from "../lib/password";
 
 const router: IRouter = Router();
 
-const DEFAULT_PASSWORD = "AdminPass123!";
+/**
+ * Admin password storage.
+ *
+ * Hashes are stored as "scrypt$<salt>$<hash>" (see lib/password.ts). Older
+ * installs stored an unsalted-per-password SHA-256 hash; those are still
+ * accepted once and transparently upgraded to scrypt on the next successful
+ * login or password change.
+ */
+const LEGACY_SALT = "sievoo_salt_v1";
+const LEGACY_DEFAULT_PASSWORD = "AdminPass123!";
 
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "sievoo_salt_v1").digest("hex");
+function legacyHash(password: string): string {
+  return crypto.createHash("sha256").update(password + LEGACY_SALT).digest("hex");
 }
 
-function generateToken(): string {
-  return crypto.randomBytes(32).toString("hex");
+function verifyAdminPassword(password: string, stored: string): boolean {
+  if (isStoredPasswordHash(stored)) return verifyStoredPasswordHash(password, stored);
+  return safeEqual(legacyHash(password), stored);
 }
 
 async function ensureAdminExists(): Promise<void> {
   const [existing] = await db.select().from(adminConfigTable).limit(1);
-  if (!existing) {
-    await db.insert(adminConfigTable).values({
-      passwordHash: hashPassword(DEFAULT_PASSWORD),
-      sessionToken: null,
-    });
-    logger.info("Admin config initialized with default password");
+
+  if (existing) {
+    if (!isStoredPasswordHash(existing.passwordHash) && safeEqual(existing.passwordHash, legacyHash(LEGACY_DEFAULT_PASSWORD))) {
+      logger.warn("Admin is still using the old default password - change it in /admin immediately");
+    }
+    return;
   }
+
+  const initialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+  if (!initialPassword) {
+    logger.warn("No admin account exists. Set ADMIN_INITIAL_PASSWORD and restart to create one.");
+    return;
+  }
+
+  await db.insert(adminConfigTable).values({
+    passwordHash: createStoredPasswordHash(initialPassword),
+    sessionToken: null,
+  });
+  logger.info("Admin account created from ADMIN_INITIAL_PASSWORD - you can remove the variable now");
 }
 
 // Initialize admin on module load
 ensureAdminExists().catch((err) => logger.error({ err }, "Failed to init admin config"));
 
 export async function verifyAdminToken(token: string): Promise<boolean> {
+  if (!token) return false;
   const [admin] = await db.select().from(adminConfigTable).limit(1);
-  return !!admin && admin.sessionToken === token;
+  return !!admin?.sessionToken && safeEqual(admin.sessionToken, token);
 }
 
 // Simple rate limiter for auth
@@ -78,13 +108,20 @@ router.post("/admin/auth", async (req, res): Promise<void> => {
   }
 
   const [admin] = await db.select().from(adminConfigTable).limit(1);
-  if (!admin || admin.passwordHash !== hashPassword(parsed.data.password)) {
+  if (!admin || !verifyAdminPassword(parsed.data.password, admin.passwordHash)) {
     res.status(401).json({ error: "Invalid password" });
     return;
   }
 
-  const token = generateToken();
-  await db.update(adminConfigTable).set({ sessionToken: token }).where(eq(adminConfigTable.id, admin.id));
+  const token = generateSessionToken();
+  const upgradedHash = isStoredPasswordHash(admin.passwordHash)
+    ? undefined
+    : createStoredPasswordHash(parsed.data.password);
+  await db
+    .update(adminConfigTable)
+    .set({ sessionToken: token, ...(upgradedHash ? { passwordHash: upgradedHash } : {}) })
+    .where(eq(adminConfigTable.id, admin.id));
+  if (upgradedHash) logger.info("Admin password hash upgraded to scrypt");
 
   res.json(AdminAuthResponse.parse({ token }));
 });
@@ -208,16 +245,16 @@ router.put("/admin/password", async (req, res): Promise<void> => {
   }
 
   const [admin] = await db.select().from(adminConfigTable).limit(1);
-  if (!admin || admin.passwordHash !== hashPassword(parsed.data.current_password)) {
+  if (!admin || !verifyAdminPassword(parsed.data.current_password, admin.passwordHash)) {
     res.status(401).json({ error: "Current password is incorrect" });
     return;
   }
 
-  const newToken = generateToken();
+  const newToken = generateSessionToken();
   await db
     .update(adminConfigTable)
     .set({
-      passwordHash: hashPassword(parsed.data.new_password),
+      passwordHash: createStoredPasswordHash(parsed.data.new_password),
       sessionToken: newToken,
     })
     .where(eq(adminConfigTable.id, admin.id));

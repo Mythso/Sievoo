@@ -24,4 +24,6 @@ export interface AnalysisUpdate {
   bull_dcf?: number | null;
   /** @nullable */
   margin_of_safety?: number | null;
+  /** @nullable */
+  projection_years?: number | null;
 }

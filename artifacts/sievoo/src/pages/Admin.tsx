@@ -695,7 +695,7 @@ function StatisticsTab({ token }: { token: string }) {
                     <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${v}`} />
                     <Tooltip
                       contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
-                      formatter={(value: number) => (value == null ? '\u2014' : `$${value.toFixed(2)}`)}
+                      formatter={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : '\u2014')}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Line type="monotone" dataKey="Price" stroke="#e5e7eb" strokeWidth={2} dot={{ r: 3 }} connectNulls />

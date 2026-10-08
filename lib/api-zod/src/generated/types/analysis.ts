@@ -22,4 +22,5 @@ export interface Analysis {
   created_at: string;
   author_alias: string;
   has_edit_pin?: boolean;
+  projection_years: number;
 }

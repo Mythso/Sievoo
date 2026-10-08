@@ -19,4 +19,5 @@ export interface AnalysisInput {
   author_alias: string;
   /** @nullable */
   edit_pin?: string | null;
+  projection_years?: number;
 }

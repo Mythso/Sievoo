@@ -47,7 +47,7 @@ export const ListAnalysesResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number().optional()
+  "projection_years": zod.number()
 })),
   "total": zod.number()
 })
@@ -86,7 +86,7 @@ export const CreateAnalysisResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number().optional()
+  "projection_years": zod.number()
 })
 
 
@@ -125,7 +125,7 @@ export const GetAnalysisResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number().optional()
+  "projection_years": zod.number()
 })
 
 
@@ -164,7 +164,7 @@ export const UpdateAnalysisResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number().optional()
+  "projection_years": zod.number()
 })
 
 
