@@ -30,8 +30,6 @@ minimumReleaseAge: 1440
 packages:
   - artifacts/*
   - lib/*
-  - lib/integrations/*
-  - scripts
 
 catalog:
   '@tailwindcss/vite': ^4.1.14
@@ -45,10 +43,8 @@ catalog:
   drizzle-orm: ^0.45.2
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
-  # Must be this exact version because expo requires it
-  react: 19.1.0
-  # Must be this exact version because expo requires it
-  react-dom: 19.1.0
+  react: ^19.3.0
+  react-dom: ^19.3.0
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
@@ -68,3 +64,8 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+
+peerDependencyRules:
+  allowedVersions:
+    # esbuild-plugin-pino's peer range stops at 0.25.8 but works with the pinned 0.27.3
+    esbuild-plugin-pino>esbuild: 0.27.3

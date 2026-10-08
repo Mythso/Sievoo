@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useListAnalyses, useGetCommunityStats } from '@workspace/api-client-react';
+import { keepPreviousData } from '@tanstack/react-query';
+import { useListAnalyses, useGetCommunityStats, getListAnalysesQueryKey } from '@workspace/api-client-react';
 import { ListAnalysesSort } from '@workspace/api-client-react';
 import { AnalysisCard } from '@/components/AnalysisCard';
 import { SievooLogo } from '@/components/SievooLogo';
@@ -19,15 +20,15 @@ export default function Home() {
 
   const { data: stats, isLoading: statsLoading } = useGetCommunityStats();
   
-  const { data: analysesData, isLoading: analysesLoading } = useListAnalyses(
-    { 
-      sort, 
-      ticker: debouncedSearch || undefined, 
-      limit, 
-      offset: (page - 1) * limit 
-    },
-    { query: { keepPreviousData: true } }
-  );
+  const listParams = {
+    sort,
+    ticker: debouncedSearch || undefined,
+    limit,
+    offset: (page - 1) * limit,
+  };
+  const { data: analysesData, isLoading: analysesLoading } = useListAnalyses(listParams, {
+    query: { queryKey: getListAnalysesQueryKey(listParams), placeholderData: keepPreviousData },
+  });
 
   return (
     <div className="flex flex-col min-h-screen">

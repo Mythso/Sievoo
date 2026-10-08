@@ -25,6 +25,7 @@ export interface Analysis {
   created_at: string;
   author_alias: string;
   has_edit_pin?: boolean;
+  projection_years: number;
 }
 
 export interface AnalysisList {
@@ -45,6 +46,7 @@ export interface AnalysisInput {
   author_alias: string;
   /** @nullable */
   edit_pin?: string | null;
+  projection_years?: number;
 }
 
 export interface AnalysisUpdate {
@@ -65,6 +67,8 @@ export interface AnalysisUpdate {
   bull_dcf?: number | null;
   /** @nullable */
   margin_of_safety?: number | null;
+  /** @nullable */
+  projection_years?: number | null;
 }
 
 export interface PinVerify {

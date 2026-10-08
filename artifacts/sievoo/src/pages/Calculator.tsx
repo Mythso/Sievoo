@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Download, Upload, Share2, Calculator as CalcIcon, ShieldAlert, ArrowRight, Printer } from 'lucide-react';
-import { useCreateAnalysis, useGetAnalysis } from '@workspace/api-client-react';
+import { useCreateAnalysis, useGetAnalysis, getGetAnalysisQueryKey } from '@workspace/api-client-react';
 
 type TVMethod = 'perpetuity' | 'ebitda';
 
@@ -41,7 +41,9 @@ export default function Calculator() {
   const forkId = searchParams.get('fork') ? parseInt(searchParams.get('fork')!) : null;
 
   const { toast } = useToast();
-  const { data: forkedData } = useGetAnalysis(forkId!, { query: { enabled: !!forkId } });
+  const { data: forkedData } = useGetAnalysis(forkId!, {
+    query: { enabled: !!forkId, queryKey: getGetAnalysisQueryKey(forkId ?? 0) },
+  });
 
   const [inputs, setInputs] = useState<CalcInputs>(DEFAULT_INPUTS);
   

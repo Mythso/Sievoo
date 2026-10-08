@@ -69,7 +69,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - Manage contact form inbox, change admin password
 - Manage the watchlist: add/remove companies, view latest valuation + insider activity per company, toggle auto-publish, trigger manual refreshes
 - **Statistics tab**: pick a followed company and see a chart of its stock price plotted against every past AutoDCF (Base case) and AutoValue (Graham Number) run, by date — built to be checked back on in a few years to see which valuation method called it right
-- SHA-256 + salt hashing, session token stored in DB
+- scrypt password hashing (random salt), session token stored in DB
 
 ### Internationalisation
 - EN / NO language toggle, stored in `localStorage`
@@ -128,7 +128,6 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 │           ├── contact_messages.ts
 │           ├── admin_config.ts
 │           └── watchlist.ts   # watchlist_companies + watchlist_valuations (incl. Graham/AutoValue columns)
-├── scripts/                       # Post-merge setup scripts
 ├── package.json                   # Monorepo root
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -175,6 +174,7 @@ pnpm install
 | `SESSION_SECRET` | ✅ | Secret for session signing |
 | `NODE_ENV` | — | `development` \| `production` |
 | `PORT` | — | Port for the API server |
+| `ADMIN_INITIAL_PASSWORD` | — | Only used when no admin account exists yet; creates it with this password. Remove after first start |
 | `RAILPACK_INSTALL_CMD` | — | `pnpm install --frozen-lockfile` — builds fail if `pnpm-lock.yaml` is out of sync with `package.json`, so commit the lockfile after every dependency change |
 
 ### Database Setup
@@ -198,6 +198,10 @@ pnpm --filter @workspace/api-server run dev
 ```bash
 pnpm run build   # typecheck + build all packages
 ```
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull requests: frozen install, `pnpm run typecheck`, and builds of the frontend and API server. Railway deploys independently, so check the CI status after pushing.
 
 ### Regenerate API Client (after openapi.yaml changes)
 
@@ -236,7 +240,7 @@ All routes are prefixed with `/api`.
 | `POST` | `/api/admin/change-password` | Change admin password (auth required) |
 | `GET` | `/ads.txt` | Google AdSense ads.txt |
 
-Admin endpoints require the `x-admin-token` header. Default admin password on first run: `AdminPass123!` — **change immediately after deployment.**
+Admin endpoints require the `x-admin-token` header. There is no default admin password: on a fresh database, set `ADMIN_INITIAL_PASSWORD` before first start to create the admin account, then remove the variable and change the password in `/admin`.
 
 ---
 
@@ -246,7 +250,7 @@ Admin endpoints require the `x-admin-token` header. Default admin password on fi
 - **Contract-first API.** `lib/api-spec/openapi.yaml` is the single source of truth for the core CRUD endpoints. Always edit the spec first, then run codegen before touching frontend or backend code. The watchlist endpoints currently ship as hand-written Zod schemas (`lib/api-zod/watchlist.ts`) pending a spec update.
 - **`type: number` in the OpenAPI spec**, not `type: integer` — Orval generates `zod.int()` for integers, which does not exist in Zod v3/v4.
 - **In-memory rate limiting** (per process). Suitable for single-instance deployment; swap for Redis if multi-instance scaling is needed.
-- **Admin auth** uses SHA-256 + static salt for password hashing and a random session token stored in the DB, passed via the `x-admin-token` header.
+- **Admin auth** uses scrypt with a random salt (stored as `scrypt$<salt>$<hash>`, shared helpers in `lib/password.ts`) and a random session token stored in the DB, passed via the `x-admin-token` header. Older SHA-256 hashes are accepted once and upgraded to scrypt on the next successful login.
 - **Watchlist data source**: current price, fundamentals, and insider activity are fetched from a public, no-API-key market data feed. Since this feed is unofficial, per-ticker failures are caught and logged individually rather than failing the whole run, and insider data falls back to a neutral score when unavailable for a given ticker.
 - **AutoValue rides the same job as AutoDCF.** Rather than a separate cron service, the Graham Number is computed inside the same `processCompany()` call that runs the DCF, from the same market-data fetch. This means it automatically runs on both the weekly `watchlist-worker` and the daily `trending-worker` schedules with no extra Yahoo Finance calls or moving parts.
 - **Valuation history is append-only.** Each `watchlist-job` run inserts a new `watchlist_valuations` row rather than updating the previous one, which is what makes the Statistics tab's multi-year price-vs-DCF-vs-Graham chart possible without a separate history table.
