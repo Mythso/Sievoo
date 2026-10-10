@@ -4,7 +4,7 @@ export default function Legal({ page }: { page: 'privacy' | 'terms' | 'about' | 
   const content = {
     privacy: {
       title: 'Privacy Policy',
-      body: 'We collect minimal data. Your calculator state is stored locally or securely in our database if you choose to publish an analysis. We do not sell your data. We use cookies only for functional purposes like session management and language preferences.'
+      body: 'We collect minimal data. Your calculator state is stored locally or securely in our database if you choose to publish an analysis. If you create an account we store your email, a hashed password and the public name you choose; your public name (never your email) is shown on your analyses, comments, profile and the leaderboard. If you follow tickers we email you alerts and a weekly digest, which you can turn off from your account page or with the link in any email. We do not sell your data. We use browser storage only for functional purposes like session management and language preferences.'
     },
     terms: {
       title: 'Terms of Service',

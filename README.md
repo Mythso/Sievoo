@@ -1,8 +1,8 @@
 # Sievoo — The Intelligent Quality Sieve for Investors
 
-> **DCF valuation engine · Graham Number & Defensive Investor screen · Portfolio allocation formula · Watchlist with automated DCF + Graham valuations · FIRE calculator · Investment community feed · Educational academy**
+> **DCF valuation engine · Graham Number & Defensive Investor screen · Portfolio allocation formula · Stock pages with automated DCF + Graham valuations (US + Oslo Børs) · Public track record & analyst leaderboard · Ticker alerts · Investment community with profiles and discussion · FIRE calculator · Bilingual (EN/NO) academy**
 
-Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven investors. It stress-tests stocks through a rigorous DCF methodology, screens them through Benjamin Graham's value-investing criteria, applies a master allocation formula, keeps a watchlist of followed companies up to date automatically (including auto-discovering trending tickers), and hosts a public community where investors share fully transparent analyses — no narratives, only math.
+Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven investors. It stress-tests stocks through a rigorous DCF methodology, screens them through Benjamin Graham's value-investing criteria, applies a master allocation formula, keeps a watchlist of followed companies up to date automatically (including auto-discovering trending tickers), covers Oslo Børs as well as US stocks, and hosts a public community where investors share fully transparent analyses under their own name and get scored on how those calls actually turned out — no narratives, only math.
 
 ---
 
@@ -44,10 +44,34 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - **Valuation history**: every run is stored as its own row rather than overwriting the last one, so price, DCF, and Graham Number can be tracked over years and checked against what actually happened (see Statistics tab below)
 - **Public History tab**: the `/watchlist` page's History tab is open to any visitor — pick a followed ticker and see the same price-vs-AutoDCF-vs-AutoValue chart as the admin Statistics tab, backed by a public (unauthenticated) history endpoint
 
-### Community Feed
-- Browse published analyses sorted by newest / most liked / highest margin of safety
-- Ticker search, like analyses, post comments
-- Fork any analysis directly into the calculator
+### Stock Pages (`/stocks`, `/stock/:ticker`)
+- `/stocks`: every tracked company with its latest price, AutoDCF, Graham Number and both margins of safety; filter by Oslo Børs / US, search and sort
+- `/stock/:ticker`: latest numbers (bear/base/bull, Graham), the full price-vs-valuation history chart, every community analysis of that ticker, follow/alert button, share links, and a "Run your own DCF" button that forks the auto-published analysis into the calculator
+- Pages are server-rendered for crawlers and link previews (see SEO below), so each ticker can rank for searches like "EQNR intrinsic value"
+
+### Community
+- **Accounts own their analyses**: publishing while logged in attributes the analysis to the account's public name (verified badge), lists it on the public profile, lets the owner delete it without a PIN, and counts it on the leaderboard. Anonymous alias + PIN publishing still works
+- **Profiles** (`/u/:id`): public name, published analyses, likes, scored calls and leaderboard rank. Emails are never shown. Renaming updates the name on past analyses and comments
+- **Analysis pages** (`/analysis/:id`): shareable page per analysis with bear/base/bull, notes, fork button, likes, share links and a discussion thread
+- **Comments** require an account (rate-limited to 20/hour per account)
+- Feed on the home page: newest / most liked / highest margin of safety, ticker search, comment counts
+- Publishing a ticker that isn't tracked yet (while logged in) adds it to the watchlist in the background (source `community`, auto-publish off), so it gets a stock page and price history for scoring. Capped at 25 new tickers/day
+
+### Track Record & Leaderboard (`/track-record`)
+- **Method accuracy**: every stored watchlist snapshot is a call (undervalued if the method's value is above that day's price). After 30, 90 and 365 days the price is checked: hit rate, average return when "cheap" vs. "expensive", and how often the price moved toward the value — for AutoDCF and the Graham Number side by side
+- **Analyst leaderboard**: account-owned analyses older than 30 days are scored. Positive margin of safety = bullish call. The start price is the watchlist's own recorded price nearest the publish date (never the price the author typed in) and the outcome is the latest recorded price; one call per user/ticker/week; 3 scored calls to be ranked
+- Computed in `lib/track-record.ts`, cached for 10 minutes
+
+### Ticker Alerts & Weekly Digest
+- Logged-in users follow a ticker with a method (AutoDCF or Graham) and a margin-of-safety threshold; up to 50 follows per account
+- After every `watchlist-worker` / `trending-worker` run (and manual refreshes) `runAlertCheck()` emails users whose threshold was crossed. An alert fires once and re-arms only after the margin drops back below the threshold
+- The weekly `watchlist-worker` also sends a digest of all followed tickers (opt-out on the Account page or via the email link)
+- One-click unsubscribe links (`/api/alerts/unsubscribe`, `/api/alerts/digest-off`) with `List-Unsubscribe` headers; no login needed
+- Email is sent through SMTP (`SMTP_URL`, see Environment Variables). Without it, alerts still fire and show on the Account page, and sending is skipped with a log line
+
+### Share Images
+- Dynamic 1200×630 PNG Open Graph images per stock (`/api/og/stock/:ticker.png`), analysis (`/api/og/analysis/:id.png`), profile (`/api/og/user/:id.png`) and for `/stocks` and `/track-record`, so shared links show the actual numbers
+- Rendered with `@resvg/resvg-js` from SVG using the bundled JetBrains Mono font (`artifacts/api-server/assets/fonts`, SIL Open Font License); cached in memory for an hour
 
 ### Portfolio Dashboard
 - Holdings table: Actual Wt % vs Target Wt % (W_final from the formula)
@@ -63,6 +87,7 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 
 ### Academy
 - Eight educational articles: DCF Fundamentals, Core-Satellite Strategy, The 4% Rule, Moats & Rule of 40, Margin of Safety, Mr. Market, Defensive vs. Enterprising Investor, and The Graham Number
+- All eight are also available in Norwegian at `/no/academy/:slug` (content in `pages/article-content-no.ts`), with `hreflang` alternates between the two languages
 
 ### Admin Console
 - Password-protected at `/admin` (not linked anywhere in the UI)
@@ -72,10 +97,16 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 - scrypt password hashing (random salt), session token stored in DB
 
 ### Internationalisation
-- EN / NO language toggle, stored in `localStorage`
+- EN / NO language toggle shared app-wide through `lib/i18n.tsx` (`useLang()` → `t(en, no)`), stored in `localStorage`; first visit defaults from the browser language
+- Norwegian Academy URLs (`/no/academy/...`) switch the UI to Norwegian; the toggle jumps between the two language versions of an article
+
+### Oslo Børs & Currencies
+- The daily `trending-worker` also onboards companies from the Oslo Børs coverage list (`lib/oslo-tickers.ts`, 37 large Oslo listings, 6 per run; override with `OSLO_TICKERS`) with a 22% tax rate and a 4% risk-free rate
+- Many listings report in a different currency than they trade in (Equinor/Frontline/Hafnia report in USD but trade in NOK, Mowi reports in EUR, ADRs report in their home currency). `fetchMarketData()` converts revenue, cash and debt into the trading currency using Yahoo FX quotes before the DCF runs, and pence quotes (GBp) are converted to GBP. Every valuation row and auto-published analysis stores its `currency`, and the UI formats amounts accordingly (`$`, `kr`, `€` …)
 
 ### SEO
-- `sitemap.xml` is generated at build time by `vite-plugin-sitemap.ts` from the routes in `App.tsx` and the Academy articles in `pages/Article.tsx`, so new pages are included automatically on the next deploy (`/admin`, `/account` and parameterised routes are skipped). It is referenced from `robots.txt`
+- **Server-rendered dynamic pages**: `vite-plugin-seo.ts` hooks into the `vite preview` server that `sievoo-web` runs in production. For `/stocks`, `/stock/:ticker`, `/analysis/:id`, `/u/:id` and `/track-record` it calls `GET /api/seo/render` and injects the page's title, description, canonical URL, share image and a plain-HTML version of the content into `index.html` (unknown tickers get a real 404 + `noindex`). React replaces the injected content when it boots, and `SeoHead` leaves the server's tags alone on that first load (`sievoo-ssr-path` marker). Fails open to the normal SPA shell if the API is slow
+- **Sitemap**: the static pages are collected at build time by `vite-plugin-sitemap.ts` from the routes in `App.tsx` and the Academy articles in `pages/Article.tsx` / `pages/article-content-no.ts` (`/admin`, `/account` and parameterised routes are skipped). At runtime `/sitemap.xml` is served by `vite-plugin-seo.ts`, which merges those with every tracked stock, analysis and active profile from `GET /api/seo/sitemap` (cached 15 minutes). It is referenced from `robots.txt`
 - `src/components/SeoHead.tsx` sets title, meta description, canonical URL, robots and Open Graph/Twitter tags per route (Academy articles get their title and first paragraph); `/admin`, `/account` and unknown routes are `noindex`
 - **Adding a page:** add the `<Route>` in `App.tsx` and a matching entry in `ROUTE_META` in `SeoHead.tsx` (title + description) — the sitemap picks the route up automatically. New Academy articles only need their `contentMap` entry in `pages/Article.tsx`
 - Static defaults (including the 1200×630 share image `public/og-image.png`) live in `index.html`, so link previews work for crawlers that don't run JavaScript
@@ -106,28 +137,36 @@ Sievoo is a full-stack financial SaaS platform built for serious, numbers-driven
 ├── artifacts/
 │   ├── sievoo/                    # React frontend  (@workspace/sievoo)
 │   │   ├── src/
-│   │   │   ├── pages/        # Home, Calculator, GrahamCalculator, FIRE, Portfolio, Academy, Admin, Contact …
-│   │   │   ├── components/   # SievooLogo, AnalysisCard, Navbar, Footer …
+│   │   │   ├── pages/        # Home, Stocks, Stock, AnalysisDetail, Profile, TrackRecord, Calculator, GrahamCalculator, FIRE, Portfolio, Academy, Admin, Account, Contact …
+│   │   │   ├── components/   # SievooLogo, AnalysisCard, Navbar, Footer, community/ (chart, share, follow, comments) …
+│   │   │   ├── lib/          # auth (session + apiFetch), i18n (EN/NO), format (money/percent), community-api (query hooks)
 │   │   │   └── hooks/
+│   │   ├── vite-plugin-seo.ts      # server-side meta/content injection + dynamic sitemap for `vite preview`
+│   │   ├── vite-plugin-sitemap.ts  # build-time list of static pages
 │   │   └── index.html        # Analytics tag lives here
 │   └── api-server/                # Express API     (@workspace/api-server)
 │       └── src/
-│           ├── routes/       # analyses, comments, contact, admin, watchlist, ticker
-│           ├── lib/          # market-data (price/fundamentals/insider/trending fetch), valuation (DCF + Graham math), watchlist-job, trending-job
+│           ├── routes/       # analyses, comments, contact, admin, watchlist, ticker, auth, stocks, users, follows, track-record, og, seo
+│           ├── lib/          # market-data (price/fundamentals/insider/trending/FX fetch), valuation (DCF + Graham math), watchlist-job, trending-job,
+│           │                 # oslo-tickers, coverage, stock-data, track-record, alerts, mailer, og-image, sessions, format
 │           ├── watchlist-worker.ts   # standalone entrypoint for the scheduled AutoDCF/AutoValue job (weekly)
 │           └── trending-worker.ts    # standalone entrypoint for the daily trending-ticker discovery job
 ├── lib/
 │   ├── api-spec/              # openapi.yaml  → single source of truth for API contracts
 │   ├── api-client-react/      # Orval-generated React Query hooks (do not edit manually)
 │   ├── api-zod/                # Orval-generated Zod schemas   (do not edit manually)
-│   │   └── watchlist.ts       # hand-written watchlist schemas (kept outside src/generated)
+│   │   ├── watchlist.ts       # hand-written watchlist schemas (kept outside src/generated)
+│   │   ├── auth.ts            # hand-written account schemas
+│   │   └── community.ts       # hand-written stock/profile/follow schemas
 │   └── db/                        # Drizzle ORM schema + connection
 │       └── src/schema/
 │           ├── analyses.ts
 │           ├── comments.ts
 │           ├── contact_messages.ts
 │           ├── admin_config.ts
-│           └── watchlist.ts   # watchlist_companies + watchlist_valuations (incl. Graham/AutoValue columns)
+│           ├── users.ts       # users + user_sessions
+│           ├── alerts.ts      # ticker_follows (alerts)
+│           └── watchlist.ts   # watchlist_companies + watchlist_valuations (incl. Graham/AutoValue + currency columns)
 ├── package.json                   # Monorepo root
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -176,6 +215,11 @@ pnpm install
 | `PORT` | — | Port for the API server |
 | `ADMIN_INITIAL_PASSWORD` | — | Only used when no admin account exists yet; creates it with this password. Remove after first start |
 | `ADMIN_RESET_PASSWORD` | — | Break-glass reset: overwrites the existing admin password (min. 12 characters) and signs out all admin sessions on startup. Remove it right after logging in, or every restart resets the password again |
+| `SMTP_URL` | — | Outgoing mail for ticker alerts and the weekly digest, e.g. `smtps://user%40domain:app-password@smtp.gmail.com:465` (api-server, watchlist-worker, trending-worker). Without it alerts only show on the Account page |
+| `MAIL_FROM` | — | Sender, e.g. `Sievoo <alerts@sievoo.com>`. Defaults to the SMTP user |
+| `SITE_URL` | — | Public site URL used in emails, canonical URLs and share images. Defaults to `https://sievoo.com` |
+| `OSLO_TICKERS` | — | Comma-separated override of the Oslo Børs coverage list (e.g. `EQNR.OL,DNB.OL`) |
+| `API_URL` | — | **sievoo-web only**: URL of the api-server. `/api` calls are proxied there, and the SEO middleware fetches page data from it |
 | `RAILPACK_INSTALL_CMD` | — | `pnpm install --frozen-lockfile` — builds fail if `pnpm-lock.yaml` is out of sync with `package.json`, so commit the lockfile after every dependency change |
 
 ### Database Setup
@@ -221,12 +265,24 @@ All routes are prefixed with `/api`.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/analyses` | List community analyses (sort, search, pagination) |
-| `POST` | `/api/analyses` | Publish a new analysis |
+| `POST` | `/api/analyses` | Publish a new analysis (attributed to the account when logged in) |
 | `GET` | `/api/analyses/:id` | Get single analysis |
+| `PATCH` / `DELETE` | `/api/analyses/:id` | Edit / delete (owner session for account analyses, PIN for anonymous ones) |
 | `POST` | `/api/analyses/:id/like` | Like an analysis |
 | `GET` | `/api/analyses/stats` | Community statistics |
 | `GET` | `/api/analyses/:id/comments` | List comments |
-| `POST` | `/api/analyses/:id/comments` | Post a comment |
+| `POST` | `/api/analyses/:id/comments` | Post a comment (account required) |
+| `POST` | `/api/auth/signup` · `/api/auth/login` · `/api/auth/logout` | User accounts |
+| `GET` / `PATCH` | `/api/auth/me` | Current user / update public name and weekly digest setting |
+| `GET` | `/api/stocks` | Every tracked stock with its latest valuation |
+| `GET` | `/api/stocks/:ticker` | Stock page data: latest numbers, history, community analyses, followers, own follow |
+| `GET` | `/api/users/:id` | Public profile with scored calls |
+| `GET` | `/api/track-record` | Method accuracy + analyst leaderboard |
+| `GET` | `/api/follows` | Own followed tickers (account required) |
+| `PUT` / `DELETE` | `/api/follows/:ticker` | Follow (with alert settings) / unfollow (account required) |
+| `GET` / `POST` | `/api/alerts/unsubscribe?token=` · `/api/alerts/digest-off?token=` | One-click email opt-outs |
+| `GET` | `/api/og/{stock/:ticker,analysis/:id,user/:id,page/:name}.png` | Dynamic share images |
+| `GET` | `/api/seo/render?path=` · `/api/seo/sitemap` | Server-side SEO data for the web service |
 | `GET` | `/api/watchlist` | List followed companies with their latest valuation |
 | `GET` | `/api/watchlist/:id/history` | Full AutoDCF/AutoValue/price history for one watchlist company (public, used by the Watchlist page's History tab) |
 | `POST` | `/api/admin/watchlist` | Add a company to the watchlist (auth required) |
@@ -241,7 +297,7 @@ All routes are prefixed with `/api`.
 | `POST` | `/api/admin/change-password` | Change admin password (auth required) |
 | `GET` | `/ads.txt` | Google AdSense ads.txt |
 
-Admin endpoints require the `x-admin-token` header. There is no default admin password: on a fresh database, set `ADMIN_INITIAL_PASSWORD` before first start to create the admin account, then remove the variable and change the password in `/admin`.
+Account endpoints take the session token as `Authorization: Bearer <token>` (the older `x-auth-token` header is still accepted); the frontend sets it once via the generated client's `setAuthTokenGetter` in `main.tsx`. The stock, profile, follow and track-record endpoints use hand-written Zod schemas (`lib/api-zod/src/community.ts`) like the watchlist and auth endpoints, pending a spec update. Admin endpoints require the `x-admin-token` header. There is no default admin password: on a fresh database, set `ADMIN_INITIAL_PASSWORD` before first start to create the admin account, then remove the variable and change the password in `/admin`.
 
 ---
 
@@ -255,7 +311,7 @@ Admin endpoints require the `x-admin-token` header. There is no default admin pa
 - **Watchlist data source**: current price, fundamentals, and insider activity are fetched from a public, no-API-key market data feed. Since this feed is unofficial, per-ticker failures are caught and logged individually rather than failing the whole run, and insider data falls back to a neutral score when unavailable for a given ticker.
 - **AutoValue rides the same job as AutoDCF.** Rather than a separate cron service, the Graham Number is computed inside the same `processCompany()` call that runs the DCF, from the same market-data fetch. This means it automatically runs on both the weekly `watchlist-worker` and the daily `trending-worker` schedules with no extra Yahoo Finance calls or moving parts.
 - **Valuation history is append-only.** Each `watchlist-job` run inserts a new `watchlist_valuations` row rather than updating the previous one, which is what makes the Statistics tab's multi-year price-vs-DCF-vs-Graham chart possible without a separate history table.
-- **Cron worker env vars**: `watchlist-worker` runs on a schedule rather than continuously, and reference variables (e.g. `DATABASE_URL` pointing at `${{Postgres.DATABASE_URL}}`) only resolve reliably starting from the deployment where they were set — setting a variable on the service is not enough by itself, it also needs a redeploy (not just a scheduled cron run) to take effect.
+- **Cron worker env vars**: the Railway Postgres plugin does not expose a ready-made `DATABASE_URL` — a reference like `${{Postgres.DATABASE_URL}}` silently resolves to nothing. Build it from the individual variables instead: `postgresql://${{Postgres.POSTGRES_USER}}:${{Postgres.POSTGRES_PASSWORD}}@${{Postgres.RAILWAY_PRIVATE_DOMAIN}}:5432/${{Postgres.POSTGRES_DB}}`. Variables only take effect from the next deployment: a redeploy is needed (a manual redeploy does not run a cron job — it runs at the next scheduled time, so to verify a fix, temporarily set the schedule a few minutes ahead).
 
 ---
 
@@ -265,14 +321,14 @@ The project runs as two always-on services plus two scheduled jobs, all deployed
 
 1. **`sievoo-web`** — builds and serves the frontend (`pnpm --filter @workspace/sievoo run build`)
 2. **`api-server`** — builds and runs the Express API (`pnpm --filter @workspace/api-server run build` / `run start`), with `pnpm --filter @workspace/db run push-force` applied as a pre-deploy step so schema changes roll out automatically
-3. **`watchlist-worker`** — same codebase as `api-server`, deployed as a separate service with its own entrypoint (`run start:watchlist-worker`) and a weekly cron schedule (Mondays 06:00 UTC) instead of a continuous process. Runs AutoDCF + AutoValue for every followed company.
-4. **`trending-worker`** — same codebase again, its own entrypoint (`run start:trending-worker`), daily cron schedule (05:00 UTC). Discovers trending US tickers from Yahoo Finance, onboards new ones, and runs AutoDCF + AutoValue on them immediately via the same `processCompany()` job as above.
+3. **`watchlist-worker`** — same codebase as `api-server`, deployed as a separate service with its own entrypoint (`run start:watchlist-worker`) and a weekly cron schedule (Mondays 06:00 UTC) instead of a continuous process. Runs AutoDCF + AutoValue for every followed company, then checks ticker alerts and sends the weekly digest.
+4. **`trending-worker`** — same codebase again, its own entrypoint (`run start:trending-worker`), daily cron schedule (05:00 UTC). Discovers trending US tickers from Yahoo Finance and the next companies from the Oslo Børs list, onboards new ones, runs AutoDCF + AutoValue on them immediately via the same `processCompany()` job as above, then checks ticker alerts.
 
 For other platforms:
 
 1. Build: `pnpm run build`
 2. Serve the API: `node --enable-source-maps artifacts/api-server/dist/index.mjs`
-3. Serve the frontend: build output in `artifacts/sievoo/dist/` — serve as static files behind the same domain or a CDN
+3. Serve the frontend with `pnpm --filter @workspace/sievoo run serve` (and `API_URL` set) to get the server-rendered SEO pages and dynamic sitemap; or serve `artifacts/sievoo/dist/public` as static files with an SPA fallback (pages then render client-side only)
 4. Run the watchlist job on a schedule: `node --enable-source-maps artifacts/api-server/dist/watchlist-worker.mjs`
 5. Run the trending discovery job on a schedule: `node --enable-source-maps artifacts/api-server/dist/trending-worker.mjs`
 
@@ -288,10 +344,11 @@ DNS for `sievoo.com` is managed in Cloudflare:
 
 ## Roadmap
 
-- Confirm `watchlist-worker` and `trending-worker` pick up the new Graham/AutoValue columns cleanly on their next scheduled runs (schema change ships via `push-force` on the next `api-server` deploy)
-- Let a few weeks of AutoDCF/AutoValue history accumulate, then revisit the Statistics tab to sanity-check the price-vs-valuation chart against real names
-- Potential expansion of Academy content and calculator tooling around Graham/value-investing themes
-- Possible follow-up: surface a lightweight "DCF vs. Graham vs. actual price" accuracy summary once enough history exists (e.g. average error over 1/3/5-year windows)
+- Set `SMTP_URL` / `MAIL_FROM` on `api-server`, `watchlist-worker` and `trending-worker` so alert and digest emails go out
+- Ticker auto-fill for the Graham Calculator: extend `/api/ticker-lookup` (or add an endpoint) to return EPS and book value per share from the same fundamentals feed the watchlist worker uses
+- Monthly valuation challenges on top of the leaderboard (a shared ticker list, scored at month end)
+- Move the hand-written stock/profile/follow/auth/watchlist schemas into `openapi.yaml` and regenerate the clients
+- Norwegian versions of the remaining pages (calculator labels, legal pages)
 
 ---
 

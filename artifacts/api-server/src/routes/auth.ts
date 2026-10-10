@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
 import { eq, lt } from "drizzle-orm";
-import { db, usersTable, userSessionsTable } from "@workspace/db";
-import { SignupBody, LoginBody, AuthHeader, AuthResponse, MeResponse } from "@workspace/api-zod";
+import { db, usersTable, userSessionsTable, analysesTable, commentsTable } from "@workspace/db";
+import { SignupBody, LoginBody, AuthResponse, MeResponse, UpdateMeBody } from "@workspace/api-zod";
 import { generateSalt, hashPassword, verifyPassword, generateSessionToken } from "../lib/password";
+import { getRequestToken, getRequestUser, getUserFromToken, publicName } from "../lib/sessions";
 import { logger } from "../lib/logger";
+
+export { getUserFromToken };
 
 const router: IRouter = Router();
 
@@ -32,6 +35,7 @@ function toPublicUser(u: typeof usersTable.$inferSelect) {
     email: u.email,
     display_name: u.displayName,
     created_at: u.createdAt.toISOString(),
+    weekly_digest: !!u.weeklyDigest,
   };
 }
 
@@ -40,31 +44,6 @@ async function createSession(userId: number): Promise<string> {
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   await db.insert(userSessionsTable).values({ userId, token, expiresAt });
   return token;
-}
-
-/**
- * Resolves a session token to its user, for other routes to use once
- * logged-in features (personal watchlists, saved analyses, Pro gates)
- * start needing to know who's asking. Lazily deletes the session if it's
- * expired rather than requiring a separate cleanup job.
- */
-export async function getUserFromToken(
-  token: string,
-): Promise<typeof usersTable.$inferSelect | null> {
-  const [session] = await db
-    .select()
-    .from(userSessionsTable)
-    .where(eq(userSessionsTable.token, token));
-
-  if (!session) return null;
-
-  if (session.expiresAt.getTime() < Date.now()) {
-    await db.delete(userSessionsTable).where(eq(userSessionsTable.id, session.id));
-    return null;
-  }
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, session.userId));
-  return user ?? null;
 }
 
 router.post("/auth/signup", async (req, res): Promise<void> => {
@@ -97,7 +76,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       email,
       passwordHash,
       passwordSalt,
-      displayName: parsed.data.display_name ?? null,
+      displayName: parsed.data.display_name || null,
     })
     .returning();
 
@@ -140,9 +119,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/logout", async (req, res): Promise<void> => {
-  const headers = AuthHeader.safeParse({ "x-auth-token": req.headers["x-auth-token"] });
-  if (headers.success) {
-    await db.delete(userSessionsTable).where(eq(userSessionsTable.token, headers.data["x-auth-token"]));
+  const token = getRequestToken(req);
+  if (token) {
+    await db.delete(userSessionsTable).where(eq(userSessionsTable.token, token));
   }
   // Logging out is idempotent - a missing/already-invalid token still
   // returns success, since the end state (no valid session) is the same.
@@ -150,19 +129,51 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
 });
 
 router.get("/auth/me", async (req, res): Promise<void> => {
-  const headers = AuthHeader.safeParse({ "x-auth-token": req.headers["x-auth-token"] });
-  if (!headers.success) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
-  const user = await getUserFromToken(headers.data["x-auth-token"]);
+  const user = await getRequestUser(req);
   if (!user) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
   res.json(MeResponse.parse(toPublicUser(user)));
+});
+
+// Update the logged-in user's public display name and email preferences.
+// The display name is what appears on published analyses, comments, the
+// public profile page and the leaderboard.
+router.patch("/auth/me", async (req, res): Promise<void> => {
+  const user = await getRequestUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const parsed = UpdateMeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+
+  const updates: Partial<typeof usersTable.$inferInsert> = {};
+  if (parsed.data.display_name !== undefined) updates.displayName = parsed.data.display_name ?? null;
+  if (parsed.data.weekly_digest !== undefined) updates.weeklyDigest = parsed.data.weekly_digest ? 1 : 0;
+
+  if (Object.keys(updates).length === 0) {
+    res.json(MeResponse.parse(toPublicUser(user)));
+    return;
+  }
+
+  const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id)).returning();
+
+  // Keep the name on the user's existing analyses and comments in sync,
+  // so a rename shows everywhere (cards, comments, leaderboard).
+  if (updated && "displayName" in updates) {
+    const name = publicName(updated);
+    await db.update(analysesTable).set({ authorAlias: name }).where(eq(analysesTable.userId, user.id));
+    await db.update(commentsTable).set({ authorName: name }).where(eq(commentsTable.userId, user.id));
+  }
+
+  res.json(MeResponse.parse(toPublicUser(updated ?? user)));
 });
 
 // Best-effort cleanup of expired sessions on module load, so the table

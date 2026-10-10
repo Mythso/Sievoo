@@ -7,11 +7,15 @@ import { SievooLogo } from '@/components/SievooLogo';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, ArrowRight, BarChart3, Users, Target } from 'lucide-react';
+import { Search, Loader2, ArrowRight, BarChart3, Users, Target, LineChart, Trophy, UserPlus } from 'lucide-react';
+import { useMe } from '@/lib/auth';
+import { useLang } from '@/lib/i18n';
 import { Link } from 'wouter';
 import { useDebounce } from '@/hooks/use-debounce';
 
 export default function Home() {
+  const { t } = useLang();
+  const { data: me } = useMe();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [sort, setSort] = useState<ListAnalysesSort>(ListAnalysesSort.newest);
@@ -60,6 +64,37 @@ export default function Home() {
               </Button>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Community entry points */}
+      <section className="border-b border-border bg-background">
+        <div className="container mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/stocks" className="group flex items-start gap-3 rounded-lg border border-border bg-card/60 p-4 hover:border-primary/50 transition-colors">
+            <LineChart className="w-5 h-5 text-primary mt-0.5" />
+            <div>
+              <div className="font-semibold group-hover:text-primary">{t('Valued stocks', 'Verdsatte aksjer')}</div>
+              <div className="text-sm text-muted-foreground">{t('US and Oslo Børs, DCF + Graham, updated weekly.', 'USA og Oslo Børs, DCF + Graham, oppdatert ukentlig.')}</div>
+            </div>
+          </Link>
+          <Link href="/track-record" className="group flex items-start gap-3 rounded-lg border border-border bg-card/60 p-4 hover:border-primary/50 transition-colors">
+            <Trophy className="w-5 h-5 text-primary mt-0.5" />
+            <div>
+              <div className="font-semibold group-hover:text-primary">{t('Track record & leaderboard', 'Treffsikkerhet og toppliste')}</div>
+              <div className="text-sm text-muted-foreground">{t('Every call checked against real prices.', 'Hvert kall sjekket mot faktiske kurser.')}</div>
+            </div>
+          </Link>
+          <Link href={me ? `/u/${me.id}` : '/account'} className="group flex items-start gap-3 rounded-lg border border-border bg-card/60 p-4 hover:border-primary/50 transition-colors">
+            <UserPlus className="w-5 h-5 text-primary mt-0.5" />
+            <div>
+              <div className="font-semibold group-hover:text-primary">{me ? t('Your profile', 'Din profil') : t('Join free', 'Bli med gratis')}</div>
+              <div className="text-sm text-muted-foreground">
+                {me
+                  ? t('Your analyses and scored calls.', 'Dine analyser og målte kall.')
+                  : t('Publish under your name, comment, get alerts.', 'Publiser under eget navn, kommenter, få varsler.')}
+              </div>
+            </div>
+          </Link>
         </div>
       </section>
 

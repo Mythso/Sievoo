@@ -1,7 +1,9 @@
 import { Link } from 'wouter';
 import { SievooLogo } from './SievooLogo';
+import { useLang } from '@/lib/i18n';
 
 export function Footer() {
+  const { t } = useLang();
   return (
     <footer className="border-t border-border bg-background py-8 md:py-12 mt-12">
       <div className="container mx-auto max-w-7xl px-4 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -10,6 +12,11 @@ export function Footer() {
           <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Sievoo.com</p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
+          <Link href="/stocks" className="hover:text-foreground transition-colors">{t('Stocks', 'Aksjer')}</Link>
+          <Link href="/watchlist" className="hover:text-foreground transition-colors">{t('Watchlist', 'Overvåkningsliste')}</Link>
+          <Link href="/track-record" className="hover:text-foreground transition-colors">{t('Track record', 'Treffsikkerhet')}</Link>
+          <Link href="/no/academy" className="hover:text-foreground transition-colors">Akademi (norsk)</Link>
+          <Link href="/contact" className="hover:text-foreground transition-colors">{t('Contact', 'Kontakt')}</Link>
           <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="link-privacy">Privacy</Link>
           <Link href="/terms" className="hover:text-foreground transition-colors" data-testid="link-terms">Terms</Link>
           <Link href="/about" className="hover:text-foreground transition-colors" data-testid="link-about">About</Link>

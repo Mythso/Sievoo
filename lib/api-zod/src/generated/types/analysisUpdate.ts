@@ -7,7 +7,11 @@
  */
 
 export interface AnalysisUpdate {
-  pin: string;
+  /**
+     * Required for anonymous analyses with a PIN. Not needed when the owner is logged in.
+     * @nullable
+     */
+  pin?: string | null;
   /** @nullable */
   title?: string | null;
   /** @nullable */

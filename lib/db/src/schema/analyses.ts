@@ -1,4 +1,5 @@
-import { pgTable, text, serial, timestamp, real, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real, integer, index } from "drizzle-orm/pg-core";
+import { usersTable } from "./users";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -18,7 +19,18 @@ export const analysesTable = pgTable("published_analyses", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   authorAlias: text("author_alias").notNull(),
   editPin: text("edit_pin"),
-});
+  // Set when a logged-in account published the analysis. Owned analyses
+  // can be edited/deleted by their owner without a PIN, show up on the
+  // owner's public profile (/u/:id) and count towards the accuracy
+  // leaderboard. Anonymous (alias + optional PIN) publishing still works.
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  // Trading currency of the ticker (ISO code, e.g. "USD", "NOK"). Null for
+  // older/manual analyses, which the UI treats as USD.
+  currency: text("currency"),
+}, (t) => [
+  index("published_analyses_user_id_idx").on(t.userId),
+  index("published_analyses_ticker_idx").on(t.ticker),
+]);
 
 export const insertAnalysisSchema = createInsertSchema(analysesTable).omit({
   id: true,

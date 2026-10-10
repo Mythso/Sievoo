@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { useRoute } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Languages } from 'lucide-react';
 import { Link } from 'wouter';
+import { contentMapNo } from './article-content-no';
+import { useLang } from '@/lib/i18n';
 
 export const contentMap: Record<string, { title: string, body: string[] }> = {
   'dcf': {
@@ -148,19 +151,40 @@ export const contentMap: Record<string, { title: string, body: string[] }> = {
 };
 
 export default function Article() {
-  const [match, params] = useRoute('/academy/:slug');
-  const slug = params?.slug || '';
-  const article = contentMap[slug];
+  const [, enParams] = useRoute('/academy/:slug');
+  const [, noParams] = useRoute('/no/academy/:slug');
+  const isNo = !!noParams;
+  const slug = (isNo ? noParams?.slug : enParams?.slug) || '';
+  const article = isNo ? contentMapNo[slug] : contentMap[slug];
+  const { lang, setLang } = useLang();
+
+  // A Norwegian URL always shows Norwegian UI around the article.
+  useEffect(() => {
+    if (isNo && lang !== 'NO') setLang('NO');
+  }, [isNo, lang, setLang]);
 
   if (!article) {
-    return <div className="container mx-auto py-24 text-center">Article not found.</div>;
+    return <div className="container mx-auto py-24 text-center">{isNo ? 'Fant ikke artikkelen.' : 'Article not found.'}</div>;
   }
+
+  const otherLang = isNo ? contentMap[slug] : contentMapNo[slug];
 
   return (
     <div className="flex-1 container mx-auto max-w-4xl py-12 px-4">
-      <Link href="/academy" className="inline-flex items-center text-sm font-mono text-muted-foreground hover:text-foreground mb-8">
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Academy
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <Link href={isNo ? '/no/academy' : '/academy'} className="inline-flex items-center text-sm font-mono text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-4 h-4 mr-2" /> {isNo ? 'Tilbake til Akademiet' : 'Back to Academy'}
+        </Link>
+        {otherLang && (
+          <Link
+            href={isNo ? `/academy/${slug}` : `/no/academy/${slug}`}
+            onClick={() => setLang(isNo ? 'EN' : 'NO')}
+            className="inline-flex items-center text-sm font-mono text-muted-foreground hover:text-foreground"
+          >
+            <Languages className="w-4 h-4 mr-2" /> {isNo ? 'Read in English' : 'Les på norsk'}
+          </Link>
+        )}
+      </div>
       
       <Card className="bg-card border-border shadow-2xl">
         <CardContent className="pt-12 px-8 md:px-16 pb-16 prose prose-invert prose-lg max-w-none prose-headings:font-bold prose-h2:text-primary prose-h3:text-foreground prose-a:text-accent">

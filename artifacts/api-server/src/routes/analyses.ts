@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, sql, ilike } from "drizzle-orm";
-import { db, analysesTable } from "@workspace/db";
+import { eq, desc, sql, ilike, and, type SQL } from "drizzle-orm";
+import { db, analysesTable, commentsTable, watchlistCompaniesTable, watchlistValuationsTable } from "@workspace/db";
 import {
   CreateAnalysisBody,
   UpdateAnalysisBody,
@@ -17,10 +17,25 @@ import {
   LikeAnalysisResponse,
   GetCommunityStatsResponse,
 } from "@workspace/api-zod";
+import { getRequestUser, publicName } from "../lib/sessions";
+import { ensureTrackedInBackground } from "../lib/coverage";
 
 const router: IRouter = Router();
 
-function toApiAnalysis(row: typeof analysesTable.$inferSelect) {
+// Correlated sub-select so list/detail responses carry a comment count
+// without an N+1 query per card.
+// (Fully qualified on purpose: drizzle renders a bare column reference as
+// just "id" inside sql``, which would bind to comments.id here.)
+const commentsCountSql = sql<number>`(select count(*)::int from comments c where c.analysis_id = "published_analyses"."id")`;
+
+export const analysisColumns = {
+  row: analysesTable,
+  commentsCount: commentsCountSql,
+};
+
+type AnalysisRow = typeof analysesTable.$inferSelect;
+
+export function toApiAnalysis(row: AnalysisRow, commentsCount = 0) {
   return {
     id: row.id,
     title: row.title,
@@ -37,7 +52,32 @@ function toApiAnalysis(row: typeof analysesTable.$inferSelect) {
     created_at: row.createdAt.toISOString(),
     author_alias: row.authorAlias,
     has_edit_pin: !!row.editPin,
+    user_id: row.userId ?? null,
+    currency: row.currency ?? null,
+    comments_count: commentsCount,
   };
+}
+
+async function selectAnalysis(id: number) {
+  const [found] = await db.select(analysisColumns).from(analysesTable).where(eq(analysesTable.id, id));
+  return found ?? null;
+}
+
+/**
+ * Who may edit/delete an analysis: its owner (logged in) for account-owned
+ * analyses; for anonymous analyses, whoever has the PIN (or anyone, if it
+ * was published without a PIN - the original behaviour).
+ */
+async function canModify(
+  req: Parameters<typeof getRequestUser>[0],
+  existing: AnalysisRow,
+  pin: string | null | undefined,
+): Promise<boolean> {
+  if (existing.userId != null) {
+    const user = await getRequestUser(req);
+    return user?.id === existing.userId;
+  }
+  return !existing.editPin || existing.editPin === pin;
 }
 
 router.get("/analyses/stats", async (_req, res): Promise<void> => {
@@ -75,13 +115,15 @@ router.get("/analyses", async (req, res): Promise<void> => {
     return;
   }
 
-  const { sort = "newest", ticker, limit = 20, offset = 0 } = query.data;
+  const { sort = "newest", ticker, limit = 20, offset = 0, user_id } = query.data;
 
-  let baseQuery = db.select().from(analysesTable).$dynamic();
+  const filters: SQL[] = [];
+  if (ticker) filters.push(ilike(analysesTable.ticker, `%${ticker}%`));
+  if (user_id != null) filters.push(eq(analysesTable.userId, user_id));
+  const where = filters.length ? and(...filters) : undefined;
 
-  if (ticker) {
-    baseQuery = baseQuery.where(ilike(analysesTable.ticker, `%${ticker}%`));
-  }
+  let baseQuery = db.select(analysisColumns).from(analysesTable).$dynamic();
+  if (where) baseQuery = baseQuery.where(where);
 
   const orderCol =
     sort === "most_liked"
@@ -90,17 +132,18 @@ router.get("/analyses", async (req, res): Promise<void> => {
         ? desc(analysesTable.marginOfSafety)
         : desc(analysesTable.createdAt);
 
-  const rows = await baseQuery.orderBy(orderCol).limit(limit).offset(offset);
+  const rows = await baseQuery
+    .orderBy(orderCol, desc(analysesTable.id))
+    .limit(Math.min(Math.max(limit, 1), 100))
+    .offset(Math.max(offset, 0));
 
   let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(analysesTable).$dynamic();
-  if (ticker) {
-    countQuery = countQuery.where(ilike(analysesTable.ticker, `%${ticker}%`));
-  }
+  if (where) countQuery = countQuery.where(where);
   const [{ count }] = await countQuery;
 
   res.json(
     ListAnalysesResponse.parse({
-      items: rows.map(toApiAnalysis),
+      items: rows.map((r) => toApiAnalysis(r.row, r.commentsCount)),
       total: count,
     }),
   );
@@ -113,14 +156,34 @@ router.post("/analyses", async (req, res): Promise<void> => {
     return;
   }
 
-  const { title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, projection_years, user_notes, full_inputs_json, author_alias, edit_pin } =
+  const { title, ticker, current_price, base_dcf, bear_dcf, bull_dcf, margin_of_safety, projection_years, user_notes, full_inputs_json, author_alias, edit_pin, currency } =
     parsed.data;
+
+  // Logged-in publishers own the analysis: it's attributed to their public
+  // name, shows on their profile and counts for the leaderboard, and they
+  // can edit/delete it without a PIN.
+  const user = await getRequestUser(req);
+  const normalizedTicker = ticker.trim().toUpperCase();
+
+  // Default the currency to what the watchlist knows for this ticker, so
+  // e.g. an EQNR.OL analysis is shown in kr rather than $.
+  let resolvedCurrency = currency?.toUpperCase() ?? null;
+  if (!resolvedCurrency) {
+    const [known] = await db
+      .select({ currency: watchlistValuationsTable.currency })
+      .from(watchlistValuationsTable)
+      .innerJoin(watchlistCompaniesTable, eq(watchlistCompaniesTable.id, watchlistValuationsTable.companyId))
+      .where(and(eq(watchlistCompaniesTable.ticker, normalizedTicker), sql`${watchlistValuationsTable.currency} is not null`))
+      .orderBy(desc(watchlistValuationsTable.computedAt))
+      .limit(1);
+    resolvedCurrency = known?.currency ?? null;
+  }
 
   const [row] = await db
     .insert(analysesTable)
     .values({
       title,
-      ticker: ticker.toUpperCase(),
+      ticker: normalizedTicker,
       currentPrice: current_price,
       baseDcf: base_dcf,
       bearDcf: bear_dcf,
@@ -129,10 +192,14 @@ router.post("/analyses", async (req, res): Promise<void> => {
       projectionYears: projection_years ?? 5,
       userNotes: user_notes ?? null,
       fullInputsJson: full_inputs_json,
-      authorAlias: author_alias,
-      editPin: edit_pin ?? null,
+      authorAlias: user ? publicName(user) : author_alias,
+      editPin: user ? null : (edit_pin ?? null),
+      userId: user?.id ?? null,
+      currency: resolvedCurrency,
     })
     .returning();
+
+  if (user) ensureTrackedInBackground(normalizedTicker);
 
   res.status(201).json(CreateAnalysisResponse.parse(toApiAnalysis(row)));
 });
@@ -144,17 +211,14 @@ router.get("/analyses/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .select()
-    .from(analysesTable)
-    .where(eq(analysesTable.id, params.data.id));
+  const found = await selectAnalysis(params.data.id);
 
-  if (!row) {
+  if (!found) {
     res.status(404).json({ error: "Analysis not found" });
     return;
   }
 
-  res.json(GetAnalysisResponse.parse(toApiAnalysis(row)));
+  res.json(GetAnalysisResponse.parse(toApiAnalysis(found.row, found.commentsCount)));
 });
 
 router.patch("/analyses/:id", async (req, res): Promise<void> => {
@@ -180,8 +244,8 @@ router.patch("/analyses/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (existing.editPin && existing.editPin !== parsed.data.pin) {
-    res.status(403).json({ error: "Incorrect PIN" });
+  if (!(await canModify(req, existing, parsed.data.pin))) {
+    res.status(403).json({ error: existing.userId != null ? "Only the author can edit this analysis" : "Incorrect PIN" });
     return;
   }
 
@@ -196,13 +260,12 @@ router.patch("/analyses/:id", async (req, res): Promise<void> => {
   if (parsed.data.margin_of_safety != null) updates.marginOfSafety = parsed.data.margin_of_safety;
   if (parsed.data.projection_years != null) updates.projectionYears = parsed.data.projection_years;
 
-  const [updated] = await db
-    .update(analysesTable)
-    .set(updates)
-    .where(eq(analysesTable.id, params.data.id))
-    .returning();
+  if (Object.keys(updates).length > 0) {
+    await db.update(analysesTable).set(updates).where(eq(analysesTable.id, params.data.id));
+  }
+  const updated = await selectAnalysis(params.data.id);
 
-  res.json(UpdateAnalysisResponse.parse(toApiAnalysis(updated)));
+  res.json(UpdateAnalysisResponse.parse(toApiAnalysis(updated!.row, updated!.commentsCount)));
 });
 
 router.delete("/analyses/:id", async (req, res): Promise<void> => {
@@ -212,7 +275,7 @@ router.delete("/analyses/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const parsed = DeleteAnalysisBody.safeParse(req.body);
+  const parsed = DeleteAnalysisBody.safeParse(req.body ?? {});
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
@@ -228,11 +291,12 @@ router.delete("/analyses/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (existing.editPin && existing.editPin !== parsed.data.pin) {
-    res.status(403).json({ error: "Incorrect PIN" });
+  if (!(await canModify(req, existing, parsed.data.pin))) {
+    res.status(403).json({ error: existing.userId != null ? "Only the author can delete this analysis" : "Incorrect PIN" });
     return;
   }
 
+  await db.delete(commentsTable).where(eq(commentsTable.analysisId, params.data.id));
   await db.delete(analysesTable).where(eq(analysesTable.id, params.data.id));
   res.sendStatus(204);
 });

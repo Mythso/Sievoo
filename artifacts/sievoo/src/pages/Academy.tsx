@@ -1,4 +1,7 @@
-import { Link } from 'wouter';
+import { useEffect } from 'react';
+import { Link, useRoute } from 'wouter';
+import { contentMapNo } from './article-content-no';
+import { useLang } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BookOpen, TrendingUp, Calculator, Shield, Scale, Waves, UserCheck, Search } from 'lucide-react';
 
@@ -62,29 +65,44 @@ const articles = [
 ];
 
 export default function Academy() {
+  const [isNo] = useRoute('/no/academy');
+  const { lang, setLang } = useLang();
+
+  // The /no/academy URL is the Norwegian index (for search engines and for
+  // sharing); the English one follows the language toggle.
+  useEffect(() => {
+    if (isNo && lang !== 'NO') setLang('NO');
+  }, [isNo, lang, setLang]);
+  const no = isNo || lang === 'NO';
+
   return (
     <div className="flex-1 py-12 container mx-auto max-w-5xl px-4 space-y-12">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Sievoo Academy</h1>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{no ? 'Sievoo Akademi' : 'Sievoo Academy'}</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Master the math behind the markets. Deep dives into valuation methodology, portfolio construction, and financial independence.
+          {no
+            ? 'Lær matematikken bak markedene. Grundige artikler om verdsettelse, porteføljebygging og økonomisk uavhengighet.'
+            : 'Master the math behind the markets. Deep dives into valuation methodology, portfolio construction, and financial independence.'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {articles.map((art) => {
           const Icon = art.icon;
+          const noVersion = no ? contentMapNo[art.slug] : undefined;
+          const title = noVersion?.title ?? art.title;
+          const description = noVersion?.description ?? art.description;
           return (
-            <Link key={art.slug} href={`/academy/${art.slug}`}>
+            <Link key={art.slug} href={noVersion ? `/no/academy/${art.slug}` : `/academy/${art.slug}`}>
               <Card className="h-full bg-card border-border hover:border-primary/50 hover:bg-muted/10 transition-all cursor-pointer hover-elevate">
                 <CardHeader>
                   <div className={`w-12 h-12 rounded-lg bg-background border border-border flex items-center justify-center mb-4 ${art.color}`}>
                     <Icon className="w-6 h-6" />
                   </div>
-                  <CardTitle className="text-2xl leading-tight">{art.title}</CardTitle>
+                  <CardTitle className="text-2xl leading-tight">{title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-base">{art.description}</CardDescription>
+                  <CardDescription className="text-base">{description}</CardDescription>
                 </CardContent>
               </Card>
             </Link>

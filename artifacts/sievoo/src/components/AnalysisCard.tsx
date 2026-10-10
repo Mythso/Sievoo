@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ThumbsUp, Copy, TrendingUp, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ThumbsUp, Copy, TrendingUp, AlertTriangle, ShieldCheck, MessageSquare, BadgeCheck } from 'lucide-react';
 import { Analysis } from '@workspace/api-client-react';
 import { useLikeAnalysis, getListAnalysesQueryKey } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { formatMoney } from '@/lib/format';
+import { useLang } from '@/lib/i18n';
 
 interface AnalysisCardProps {
   analysis: Analysis;
@@ -15,6 +17,8 @@ interface AnalysisCardProps {
 
 export function AnalysisCard({ analysis }: AnalysisCardProps) {
   const [, setLocation] = useLocation();
+  const { t } = useLang();
+  const cur = analysis.currency ?? null;
   const queryClient = useQueryClient();
   const [isLiking, setIsLiking] = useState(false);
   const likeMutation = useLikeAnalysis();
@@ -59,21 +63,32 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
     <Card className="flex flex-col h-full bg-card border-border hover-elevate transition-all duration-300">
       <CardHeader className="pb-4 border-b border-border/50">
         <div className="flex justify-between items-start mb-2">
-          <Badge className="bg-primary/20 text-primary border-primary/30 font-mono text-lg px-3 py-1 font-bold">
-            {analysis.ticker}
-          </Badge>
+          <Link href={`/stock/${encodeURIComponent(analysis.ticker)}`}>
+            <Badge className="bg-primary/20 text-primary border-primary/30 font-mono text-lg px-3 py-1 font-bold hover:bg-primary/30">
+              {analysis.ticker}
+            </Badge>
+          </Link>
           <div className="text-right">
             <div className="text-2xl font-mono font-bold text-foreground">
-              ${analysis.current_price.toFixed(2)}
+              {formatMoney(analysis.current_price, cur)}
             </div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider">Current Price</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">{t('Price', 'Kurs')}</div>
           </div>
         </div>
         <CardTitle className="text-xl font-bold leading-tight line-clamp-2">
-          {analysis.title}
+          <Link href={`/analysis/${analysis.id}`} className="hover:text-primary transition-colors">
+            {analysis.title}
+          </Link>
         </CardTitle>
-        <div className="flex items-center text-xs text-muted-foreground mt-2 font-mono">
-          <span className="text-foreground/80 font-medium">@{analysis.author_alias}</span>
+        <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-2 font-mono">
+          {analysis.user_id ? (
+            <Link href={`/u/${analysis.user_id}`} className="inline-flex items-center gap-1 text-foreground/80 font-medium hover:text-primary">
+              <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+              {analysis.author_alias}
+            </Link>
+          ) : (
+            <span className="text-foreground/80 font-medium">@{analysis.author_alias}</span>
+          )}
           <span className="mx-2">•</span>
           <span>{format(new Date(analysis.created_at), 'MMM d, yyyy')}</span>
           <span className="mx-2">•</span>
@@ -85,15 +100,15 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
         <div className="grid grid-cols-3 gap-2 mb-6">
           <div className="bg-background/50 rounded-md p-2 text-center border border-border/50">
             <div className="text-[10px] uppercase text-muted-foreground mb-1">Bear</div>
-            <div className="font-mono text-destructive font-semibold">${analysis.bear_dcf.toFixed(2)}</div>
+            <div className="font-mono text-sm whitespace-nowrap text-destructive font-semibold">{formatMoney(analysis.bear_dcf, cur)}</div>
           </div>
           <div className="bg-background/80 rounded-md p-2 text-center border border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.05)]">
             <div className="text-[10px] uppercase text-primary/80 mb-1 font-bold">Base</div>
-            <div className="font-mono text-foreground font-bold">${analysis.base_dcf.toFixed(2)}</div>
+            <div className="font-mono text-sm whitespace-nowrap text-foreground font-bold">{formatMoney(analysis.base_dcf, cur)}</div>
           </div>
           <div className="bg-background/50 rounded-md p-2 text-center border border-border/50">
             <div className="text-[10px] uppercase text-muted-foreground mb-1">Bull</div>
-            <div className="font-mono text-accent font-semibold">${analysis.bull_dcf.toFixed(2)}</div>
+            <div className="font-mono text-sm whitespace-nowrap text-accent font-semibold">{formatMoney(analysis.bull_dcf, cur)}</div>
           </div>
         </div>
 
@@ -106,7 +121,7 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
             {isSafe ? <ShieldCheck className="w-5 h-5 text-accent" /> :
              isRisky ? <AlertTriangle className="w-5 h-5 text-destructive" /> :
              <TrendingUp className="w-5 h-5 text-primary" />}
-            <span className="text-sm font-semibold uppercase tracking-wider text-foreground">Margin of Safety</span>
+            <span className="text-sm font-semibold uppercase tracking-wider text-foreground">{t('Margin of Safety', 'Sikkerhetsmargin')}</span>
           </div>
           <div className={`font-mono text-lg font-bold ${
             isSafe ? 'text-accent' : 
@@ -127,7 +142,17 @@ export function AnalysisCard({ analysis }: AnalysisCardProps) {
           data-testid={`btn-fork-${analysis.id}`}
         >
           <Copy className="w-3.5 h-3.5 mr-2" />
-          Fork to Calculator
+          {t('Fork', 'Kopier')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="font-mono text-xs hover:bg-primary/10 hover:text-primary"
+          onClick={() => setLocation(`/analysis/${analysis.id}`)}
+          aria-label={t('Open discussion', 'Åpne diskusjonen')}
+        >
+          <MessageSquare className="w-3.5 h-3.5 mr-2" />
+          {analysis.comments_count ?? 0}
         </Button>
         <Button 
           variant="ghost" 

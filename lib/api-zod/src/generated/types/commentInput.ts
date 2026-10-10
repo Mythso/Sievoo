@@ -6,7 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Commenting requires a logged-in account; the author name is taken from the account.
+ */
 export interface CommentInput {
-  author_name: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
   comment_text: string;
 }

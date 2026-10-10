@@ -32,6 +32,7 @@ export const WatchlistValuationSnapshot = zod.object({
   "graham_number": zod.number().nullish(),
   "graham_margin_of_safety": zod.number().nullish(),
   "insider_score": zod.number().nullish(),
+  "currency": zod.string().nullish(),
   "insider_transactions": zod.array(InsiderTransactionItem).nullish(),
   "status": zod.enum(['ok', 'error']),
   "error_message": zod.string().nullish(),

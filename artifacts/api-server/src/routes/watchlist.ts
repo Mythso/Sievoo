@@ -17,6 +17,7 @@ import {
 import { verifyAdminToken } from "./admin";
 import { runWatchlistUpdate } from "../lib/watchlist-job";
 import { lookupTicker } from "../lib/market-data";
+import { runAlertCheck } from "../lib/alerts";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -38,6 +39,7 @@ function toApiValuation(row: typeof watchlistValuationsTable.$inferSelect) {
     graham_number: row.grahamNumber,
     graham_margin_of_safety: row.grahamMarginOfSafety,
     insider_score: row.insiderScore,
+    currency: row.currency,
     insider_transactions: row.insiderTransactionsJson
       ? (() => {
           try {
@@ -290,6 +292,7 @@ router.post("/admin/watchlist/refresh", async (req, res): Promise<void> => {
 
   try {
     const results = await runWatchlistUpdate();
+    await runAlertCheck().catch((err) => logger.error({ err }, "Alert check after manual refresh failed"));
     const updated = results.filter((r) => r.status === "ok").length;
     const failed = results.filter((r) => r.status === "error").length;
     res.json(RefreshWatchlistResponse.parse({ updated, failed, results }));

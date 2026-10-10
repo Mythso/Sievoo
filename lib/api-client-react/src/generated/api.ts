@@ -465,7 +465,7 @@ export const getUpdateAnalysisUrl = (id: number,) => {
 }
 
 /**
- * @summary Edit an analysis (requires PIN)
+ * @summary Edit an analysis (owner session, or PIN for anonymous analyses)
  */
 export const updateAnalysis = async (id: number,
     analysisUpdate: AnalysisUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Analysis> => {
@@ -515,7 +515,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateAnalysisMutationError = ErrorType<void>
 
     /**
- * @summary Edit an analysis (requires PIN)
+ * @summary Edit an analysis (owner session, or PIN for anonymous analyses)
  */
 export const useUpdateAnalysis = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAnalysis>>, TError,{id: number;data: BodyType<AnalysisUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -537,7 +537,7 @@ export const getDeleteAnalysisUrl = (id: number,) => {
 }
 
 /**
- * @summary Delete an analysis (requires PIN)
+ * @summary Delete an analysis (owner session, or PIN for anonymous analyses)
  */
 export const deleteAnalysis = async (id: number,
     pinVerify: PinVerify, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
@@ -587,7 +587,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteAnalysisMutationError = ErrorType<void>
 
     /**
- * @summary Delete an analysis (requires PIN)
+ * @summary Delete an analysis (owner session, or PIN for anonymous analyses)
  */
 export const useDeleteAnalysis = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAnalysis>>, TError,{id: number;data: BodyType<PinVerify>}, TContext>, request?: SecondParameter<typeof customFetch>}

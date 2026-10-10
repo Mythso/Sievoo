@@ -16,7 +16,10 @@ export const watchlistCompaniesTable = pgTable("watchlist_companies", {
   companyName: text("company_name"),
   notes: text("notes"),
   // "admin" = added manually via the admin panel, "trending" = auto-added
-  // by the daily trending-worker (Yahoo Finance trending tickers).
+  // by the daily trending-worker (Yahoo Finance trending tickers),
+  // "oslo" = seeded from the Oslo Børs coverage list (lib/oslo-tickers.ts),
+  // "community" = added because a logged-in user published an analysis for
+  // a ticker that wasn't covered yet (so it gets tracked for the leaderboard).
   source: text("source").notNull().default("admin"),
   projectionYears: integer("projection_years").notNull().default(5),
   riskFreeRate: real("risk_free_rate").notNull().default(4.5),
@@ -60,6 +63,11 @@ export const watchlistValuationsTable = pgTable("watchlist_valuations", {
   bookValuePerShare: real("book_value_per_share"),
   grahamNumber: real("graham_number"),
   grahamMarginOfSafety: real("graham_margin_of_safety"),
+  // Trading currency of `price` and every per-share figure in this row
+  // (ISO code, e.g. "USD", "NOK"). Fundamentals reported in another
+  // currency (e.g. Equinor reports in USD but trades in NOK) are converted
+  // into this currency before the DCF runs - see lib/market-data.ts.
+  currency: text("currency"),
   insiderScore: real("insider_score"),
   insiderTransactionsJson: text("insider_transactions_json"),
   rawJson: text("raw_json"),

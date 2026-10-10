@@ -20,4 +20,6 @@ export interface AnalysisInput {
   /** @nullable */
   edit_pin?: string | null;
   projection_years?: number;
+  /** @nullable */
+  currency?: string | null;
 }

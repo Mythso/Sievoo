@@ -13,6 +13,10 @@ sort?: ListAnalysesSort;
  * @nullable
  */
 ticker?: string | null;
+/**
+ * @nullable
+ */
+user_id?: number | null;
 limit?: number;
 offset?: number;
 };

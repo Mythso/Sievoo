@@ -12,4 +12,6 @@ export interface Comment {
   author_name: string;
   comment_text: string;
   created_at: string;
+  /** @nullable */
+  user_id?: number | null;
 }

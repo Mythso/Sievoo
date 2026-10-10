@@ -6,9 +6,16 @@
  * watchlist-worker refresh.
  */
 import { runTrendingDiscovery } from "./lib/trending-job";
+import { runAlertCheck, sendWeeklyDigests } from "./lib/alerts";
 import { logger } from "./lib/logger";
 
 runTrendingDiscovery()
+  .then(async (results) => {
+    // Alerts (and, weekly, the digest) run right after fresh numbers land.
+    // Failures here are logged but never fail the valuation run itself.
+    await runAlertCheck().catch((err) => logger.error({ err }, "Alert check failed"));
+    return results;
+  })
   .then((results) => {
     const ok = results.filter((r) => r.status === "ok").length;
     const failed = results.filter((r) => r.status === "error").length;

@@ -50,6 +50,10 @@ paths:
           in: query
           schema:
             type: ["string", "null"]
+        - name: user_id
+          in: query
+          schema:
+            type: ["number", "null"]
         - name: limit
           in: query
           schema:
@@ -121,7 +125,7 @@ paths:
     patch:
       operationId: updateAnalysis
       tags: [analyses]
-      summary: Edit an analysis (requires PIN)
+      summary: Edit an analysis (owner session, or PIN for anonymous analyses)
       parameters:
         - name: id
           in: path
@@ -148,7 +152,7 @@ paths:
     delete:
       operationId: deleteAnalysis
       tags: [analyses]
-      summary: Delete an analysis (requires PIN)
+      summary: Delete an analysis (owner session, or PIN for anonymous analyses)
       parameters:
         - name: id
           in: path
@@ -406,6 +410,14 @@ components:
           type: boolean
         projection_years:
           type: number
+        user_id:
+          type: ["number", "null"]
+          description: Set when the analysis was published by a logged-in Sievoo account
+        currency:
+          type: ["string", "null"]
+          description: Trading currency of the ticker (ISO code). Null means unknown (treated as USD).
+        comments_count:
+          type: number
 
     AnalysisList:
       type: object
@@ -446,13 +458,15 @@ components:
           type: ["string", "null"]
         projection_years:
           type: number
+        currency:
+          type: ["string", "null"]
 
     AnalysisUpdate:
       type: object
-      required: [pin]
       properties:
         pin:
-          type: string
+          type: ["string", "null"]
+          description: Required for anonymous analyses with a PIN. Not needed when the owner is logged in.
         title:
           type: ["string", "null"]
         user_notes:
@@ -474,10 +488,9 @@ components:
 
     PinVerify:
       type: object
-      required: [pin]
       properties:
         pin:
-          type: string
+          type: ["string", "null"]
 
     LikeResult:
       type: object
@@ -522,6 +535,8 @@ components:
           type: string
         created_at:
           type: string
+        user_id:
+          type: ["number", "null"]
 
     CommentList:
       type: array
@@ -530,12 +545,13 @@ components:
 
     CommentInput:
       type: object
-      required: [author_name, comment_text]
+      required: [comment_text]
+      description: Commenting requires a logged-in account; the author name is taken from the account.
       properties:
-        author_name:
-          type: string
         comment_text:
           type: string
+          minLength: 1
+          maxLength: 2000
 
     ContactInput:
       type: object

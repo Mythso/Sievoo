@@ -54,6 +54,9 @@ async function buildAll() {
       "oracledb",
       "mongodb-client-encryption",
       "nodemailer",
+      // Native (napi) renderer for share images: loads a platform-specific
+      // binary at runtime, so it must be resolved from node_modules.
+      "@resvg/resvg-js",
       "handlebars",
       "knex",
       "typeorm",

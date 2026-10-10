@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
+import { useLang, type Lang } from '@/lib/i18n';
+import { useMe, publicNameOf } from '@/lib/auth';
 import { Menu, X, Globe, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SievooLogo } from './SievooLogo';
@@ -7,40 +9,46 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 const navItemsEn = [
   { label: 'Home', href: '/' },
+  { label: 'Stocks', href: '/stocks' },
   { label: 'Calculator', href: '/calculator' },
-  { label: 'Graham Calculator', href: '/graham-calculator' },
+  { label: 'Graham', href: '/graham-calculator' },
+  { label: 'Track Record', href: '/track-record' },
   { label: 'FIRE', href: '/fire' },
   { label: 'Portfolio', href: '/portfolio' },
-  { label: 'Watchlist', href: '/watchlist' },
   { label: 'Academy', href: '/academy' },
-  { label: 'Contact', href: '/contact' },
 ];
 
 const navItemsNo = [
   { label: 'Hjem', href: '/' },
+  { label: 'Aksjer', href: '/stocks' },
   { label: 'Kalkulator', href: '/calculator' },
-  { label: 'Graham-kalkulator', href: '/graham-calculator' },
+  { label: 'Graham', href: '/graham-calculator' },
+  { label: 'Treffsikkerhet', href: '/track-record' },
   { label: 'FIRE', href: '/fire' },
   { label: 'Portefølje', href: '/portfolio' },
-  { label: 'Overvåkningsliste', href: '/watchlist' },
-  { label: 'Akademi', href: '/academy' },
-  { label: 'Kontakt', href: '/contact' },
+  { label: 'Akademi', href: '/no/academy' },
 ];
 
+/** Same page in the other language, for pages that have language-specific URLs. */
+function counterpartPath(path: string, lang: Lang): string | null {
+  if (lang === 'NO' && /^\/academy(\/|$)/.test(path)) return `/no${path}`;
+  if (lang === 'EN' && /^\/no\/academy(\/|$)/.test(path)) return path.replace(/^\/no/, '');
+  return null;
+}
+
 export function Navbar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [lang, setLang] = useState<'EN' | 'NO'>('EN');
+  const { lang, setLang } = useLang();
+  const { data: me } = useMe();
 
-  useEffect(() => {
-    const savedLang = localStorage.getItem('sievoo_lang') as 'EN' | 'NO';
-    if (savedLang) setLang(savedLang);
-  }, []);
-
-  const changeLang = (l: 'EN' | 'NO') => {
+  const changeLang = (l: Lang) => {
     setLang(l);
-    localStorage.setItem('sievoo_lang', l);
+    const other = counterpartPath(location, l);
+    if (other) setLocation(other);
   };
+
+  const isActive = (href: string) => (href === '/' ? location === '/' : location === href || location.startsWith(`${href}/`));
 
   const navItems = lang === 'EN' ? navItemsEn : navItemsNo;
 
@@ -52,13 +60,13 @@ export function Navbar() {
             <SievooLogo className="h-8 w-8 text-foreground" />
             <span className="font-bold text-xl tracking-tight hidden sm:inline-block">Sievoo</span>
           </Link>
-          <div className="hidden md:flex gap-6">
+          <div className="hidden lg:flex gap-5">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-sm font-medium transition-colors hover:text-foreground/80 ${
-                  location === item.href ? 'text-foreground' : 'text-foreground/60'
+                className={`text-sm font-medium transition-colors hover:text-foreground/80 whitespace-nowrap ${
+                  isActive(item.href) ? 'text-foreground' : 'text-foreground/60'
                 }`}
                 data-testid={`nav-${item.label.toLowerCase()}`}
               >
@@ -69,12 +77,20 @@ export function Navbar() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Link href="/account">
-            <Button variant="ghost" size="icon" className="h-9 w-9 px-0" data-testid="btn-account">
-              <UserCircle className="h-4 w-4" />
-              <span className="sr-only">Account</span>
-            </Button>
-          </Link>
+          {me ? (
+            <Link href="/account">
+              <Button variant="ghost" className="h-9 px-2 gap-2" data-testid="btn-account">
+                <UserCircle className="h-4 w-4 text-primary" />
+                <span className="hidden sm:inline max-w-[120px] truncate text-sm">{publicNameOf(me)}</span>
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/account">
+              <Button variant="outline" size="sm" className="h-9 font-mono text-xs uppercase tracking-wider" data-testid="btn-account">
+                {lang === 'NO' ? 'Logg inn' : 'Log in'}
+              </Button>
+            </Link>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -95,7 +111,7 @@ export function Navbar() {
 
           <Button
             variant="ghost"
-            className="md:hidden px-0 w-9 h-9"
+            className="lg:hidden px-0 w-9 h-9"
             onClick={() => setIsOpen(!isOpen)}
             data-testid="btn-mobile-menu"
           >
@@ -105,13 +121,13 @@ export function Navbar() {
       </div>
 
       {isOpen && (
-        <div className="md:hidden border-b border-border bg-background p-4 space-y-4">
+        <div className="lg:hidden border-b border-border bg-background p-4 space-y-4">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={`block text-sm font-medium ${
-                location === item.href ? 'text-primary' : 'text-foreground/80'
+                isActive(item.href) ? 'text-primary' : 'text-foreground/80'
               }`}
               onClick={() => setIsOpen(false)}
             >

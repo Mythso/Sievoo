@@ -103,6 +103,15 @@ async function fetchYahooQuoteSummary(
 
 export interface MarketData {
   ticker: string;
+  // Trading currency of `price` and of every per-share figure below (ISO
+  // major-unit code, e.g. "USD", "NOK"; pence quotes are converted to GBP). Totals (revenue, cash,
+  // debt) are converted into this currency too, so the DCF never mixes
+  // currencies - see normalizeCurrency/getFxRate below.
+  currency: string;
+  // Currency the company reports its financial statements in, before
+  // conversion (e.g. Equinor: "USD" while it trades in NOK).
+  financialCurrency: string;
+  fxRate: number; // financialCurrency -> currency multiplier applied to totals
   price: number;
   shares: number;
   beta: number;
@@ -118,42 +127,93 @@ export interface MarketData {
   bookValuePerShare: number | null;
 }
 
+/**
+ * Yahoo quotes London (and a few other) listings in minor units ("GBp" =
+ * pence, "ILA" = agorot, "ZAc" = cents) while statements are in the major
+ * unit. Returns the ISO major currency and how many minor units it has.
+ */
+export function normalizeCurrency(code: string | null | undefined): { iso: string; minorUnits: number } {
+  if (!code) return { iso: "USD", minorUnits: 1 };
+  if (code === "GBp" || code === "GBX") return { iso: "GBP", minorUnits: 100 };
+  if (code === "ILA") return { iso: "ILS", minorUnits: 100 };
+  if (code === "ZAc") return { iso: "ZAR", minorUnits: 100 };
+  return { iso: code.toUpperCase(), minorUnits: 1 };
+}
+
+const fxCache = new Map<string, { rate: number; expiresAt: number }>();
+
+/**
+ * Exchange rate from one ISO currency to another (1 `from` = rate `to`),
+ * from Yahoo's "<FROM><TO>=X" quotes. Cached for 6 hours per pair since
+ * the valuation only needs the rate to be roughly current.
+ */
+export async function getFxRate(from: string, to: string): Promise<number> {
+  if (from === to) return 1;
+  const key = `${from}${to}`;
+  const cached = fxCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.rate;
+
+  const result = await fetchYahooQuoteSummary(`${key}=X`, "price");
+  const rate: number | undefined = result.price?.regularMarketPrice?.raw;
+  if (!rate || !Number.isFinite(rate) || rate <= 0) {
+    throw new Error(`No exchange rate available for ${from}->${to}`);
+  }
+
+  fxCache.set(key, { rate, expiresAt: Date.now() + 6 * 60 * 60 * 1000 });
+  return rate;
+}
+
 export async function fetchMarketData(ticker: string): Promise<MarketData> {
-  const modules = "defaultKeyStatistics,financialData";
+  const modules = "defaultKeyStatistics,financialData,price";
   const result = await fetchYahooQuoteSummary(ticker, modules);
 
   const stats = result.defaultKeyStatistics ?? {};
   const fin = result.financialData ?? {};
+  const priceModule = result.price ?? {};
 
-  const price: number | undefined = fin.currentPrice?.raw;
+  const price: number | undefined = fin.currentPrice?.raw ?? priceModule.regularMarketPrice?.raw;
   const shares: number | undefined = stats.sharesOutstanding?.raw;
   const beta: number = stats.beta?.raw ?? 1.0;
-  const cash: number = fin.totalCash?.raw ?? 0;
-  const debtTotal: number = fin.totalDebt?.raw ?? 0;
-  const revenue: number | undefined = fin.totalRevenue?.raw;
+  const revenueRaw: number | undefined = fin.totalRevenue?.raw;
   const revGrowth: number = (fin.revenueGrowth?.raw ?? 0) * 100;
   const freeCashflow: number | undefined = fin.freeCashflow?.raw;
   const operatingMargin: number = (fin.operatingMargins?.raw ?? 0) * 100;
+  // Margins are ratios, so they're the same in any currency.
   const fcfMargin: number =
-    revenue && freeCashflow ? (freeCashflow / revenue) * 100 : operatingMargin;
+    revenueRaw && freeCashflow ? (freeCashflow / revenueRaw) * 100 : operatingMargin;
+  // Per-share figures (EPS, book value) are already quoted in the trading
+  // currency by Yahoo; only the statement totals below need converting.
   const eps: number | null = stats.trailingEps?.raw ?? null;
   const bookValuePerShare: number | null = stats.bookValue?.raw ?? null;
 
-  if (!price || !shares || !revenue) {
+  if (!price || !shares || !revenueRaw) {
     throw new Error(`Incomplete data returned from Yahoo Finance for ${ticker}`);
   }
 
+  // Many listings report in a different currency than they trade in
+  // (Equinor/Frontline/Hafnia report in USD but trade in NOK on Oslo Børs,
+  // Mowi reports in EUR, ADRs like TSM report in TWD). Without converting,
+  // revenue/cash/debt per share would be off by the exchange rate.
+  const quote = normalizeCurrency(priceModule.currency ?? fin.financialCurrency);
+  const reported = normalizeCurrency(fin.financialCurrency ?? priceModule.currency);
+  const fxRate = reported.iso === quote.iso ? 1 : await getFxRate(reported.iso, quote.iso);
+
   return {
     ticker,
-    price,
+    currency: quote.iso,
+    financialCurrency: reported.iso,
+    fxRate,
+    // Minor-unit quotes (pence etc.) are converted to the major unit so the
+    // stored price, the DCF output and the currency label all agree.
+    price: price / quote.minorUnits,
     shares,
     beta,
-    cash,
-    debtTotal,
-    revenue,
+    cash: (fin.totalCash?.raw ?? 0) * fxRate,
+    debtTotal: (fin.totalDebt?.raw ?? 0) * fxRate,
+    revenue: revenueRaw * fxRate,
     revGrowth,
     fcfMargin,
-    eps,
+    eps: eps,
     bookValuePerShare,
   };
 }

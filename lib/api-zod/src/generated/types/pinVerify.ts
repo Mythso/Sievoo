@@ -7,5 +7,6 @@
  */
 
 export interface PinVerify {
-  pin: string;
+  /** @nullable */
+  pin?: string | null;
 }

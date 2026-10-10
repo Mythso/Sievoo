@@ -5,7 +5,8 @@ import type { Plugin } from 'vite';
 /**
  * Generates sitemap.xml from the source on every build, so new routes in
  * App.tsx and new Academy articles in pages/Article.tsx are picked up
- * automatically on the next deploy. Also served live in dev at /sitemap.xml.
+ * automatically on the next deploy. At runtime, vite-plugin-seo.ts serves
+ * /sitemap.xml with these static pages plus the dynamic ones from the API.
  */
 
 const SITE_URL = 'https://sievoo.com';
@@ -33,7 +34,11 @@ function collectPaths(srcDir: string): string[] {
     );
   }
 
-  const articlePaths = slugs.map((slug) => `/academy/${slug}`);
+  // Norwegian article versions (pages/article-content-no.ts), same key format.
+  const noSource = fs.readFileSync(path.join(srcDir, 'pages', 'article-content-no.ts'), 'utf8');
+  const noSlugs = [...noSource.matchAll(/^ {2}['"]([a-z0-9-]+)['"]\s*:\s*\{/gm)].map((m) => m[1]);
+
+  const articlePaths = [...slugs.map((slug) => `/academy/${slug}`), ...noSlugs.map((slug) => `/no/academy/${slug}`)];
   const academyIndex = routes.indexOf('/academy');
   const paths =
     academyIndex === -1
@@ -43,20 +48,22 @@ function collectPaths(srcDir: string): string[] {
   return [...new Set(paths)];
 }
 
-function buildXml(paths: string[]): string {
-  const urls = paths.map((p) => `  <url>\n    <loc>${SITE_URL}${p}</loc>\n  </url>`).join('\n');
+function buildXml(paths: (string | { path: string; lastmod?: string | null })[]): string {
+  const urls = paths
+    .map((p) => {
+      const entry = typeof p === 'string' ? { path: p, lastmod: null } : p;
+      const lastmod = entry.lastmod ? `\n    <lastmod>${entry.lastmod}</lastmod>` : '';
+      return `  <url>\n    <loc>${SITE_URL}${entry.path}</loc>${lastmod}\n  </url>`;
+    })
+    .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
+
+export { collectPaths, buildXml };
 
 export function sitemapPlugin(srcDir: string): Plugin {
   return {
     name: 'sievoo-sitemap',
-    configureServer(server) {
-      server.middlewares.use('/sitemap.xml', (_req, res) => {
-        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-        res.end(buildXml(collectPaths(srcDir)));
-      });
-    },
     generateBundle() {
       const paths = collectPaths(srcDir);
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildXml(paths) });

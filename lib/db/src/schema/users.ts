@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
 
 // Real user accounts (distinct from the single-row admin_config login used
 // for the /admin panel). This is the foundation the monetization plan
@@ -15,7 +15,17 @@ export const usersTable = pgTable("users", {
   passwordSalt: text("password_salt").notNull(),
   displayName: text("display_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+  // Weekly email digest of the user's followed tickers (sent by the
+  // watchlist-worker after its Monday run). On by default for anyone who
+  // follows at least one ticker; one-click opt-out via `emailToken`.
+  weeklyDigest: integer("weekly_digest").notNull().default(1),
+  // Random token used in email footers (digest opt-out), so managing email
+  // never requires logging in. Generated lazily on first send. Indexed but
+  // deliberately not a UNIQUE constraint: adding one to a populated table
+  // makes `drizzle-kit push --force` stop at an interactive truncate prompt
+  // (which would fail the pre-deploy step). 24 random bytes don't collide.
+  emailToken: text("email_token"),
+}, (t) => [index("users_email_token_idx").on(t.emailToken)]);
 
 // Session tokens, one row per active login (so a user can be logged in on
 // multiple devices, and logging out on one doesn't affect the others).

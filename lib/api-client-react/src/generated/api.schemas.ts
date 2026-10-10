@@ -26,6 +26,17 @@ export interface Analysis {
   author_alias: string;
   has_edit_pin?: boolean;
   projection_years: number;
+  /**
+     * Set when the analysis was published by a logged-in Sievoo account
+     * @nullable
+     */
+  user_id?: number | null;
+  /**
+     * Trading currency of the ticker (ISO code). Null means unknown (treated as USD).
+     * @nullable
+     */
+  currency?: string | null;
+  comments_count?: number;
 }
 
 export interface AnalysisList {
@@ -47,10 +58,16 @@ export interface AnalysisInput {
   /** @nullable */
   edit_pin?: string | null;
   projection_years?: number;
+  /** @nullable */
+  currency?: string | null;
 }
 
 export interface AnalysisUpdate {
-  pin: string;
+  /**
+     * Required for anonymous analyses with a PIN. Not needed when the owner is logged in.
+     * @nullable
+     */
+  pin?: string | null;
   /** @nullable */
   title?: string | null;
   /** @nullable */
@@ -72,7 +89,8 @@ export interface AnalysisUpdate {
 }
 
 export interface PinVerify {
-  pin: string;
+  /** @nullable */
+  pin?: string | null;
 }
 
 export interface LikeResult {
@@ -96,12 +114,20 @@ export interface Comment {
   author_name: string;
   comment_text: string;
   created_at: string;
+  /** @nullable */
+  user_id?: number | null;
 }
 
 export type CommentList = Comment[];
 
+/**
+ * Commenting requires a logged-in account; the author name is taken from the account.
+ */
 export interface CommentInput {
-  author_name: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
   comment_text: string;
 }
 
@@ -152,6 +178,10 @@ sort?: ListAnalysesSort;
  * @nullable
  */
 ticker?: string | null;
+/**
+ * @nullable
+ */
+user_id?: number | null;
 limit?: number;
 offset?: number;
 };

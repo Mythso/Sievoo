@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import { sitemapPlugin } from './vite-plugin-sitemap';
+import { seoPlugin } from './vite-plugin-seo';
 
 
 const rawPort = process.env.PORT;
@@ -49,6 +50,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     sitemapPlugin(path.resolve(import.meta.dirname, 'src')),
+    seoPlugin(path.resolve(import.meta.dirname, 'src')),
   ],
   resolve: {
     alias: {

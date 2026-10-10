@@ -10,7 +10,7 @@ import * as zod from 'zod';
 export const SignupBody = zod.object({
   "email": zod.string().email().max(320),
   "password": zod.string().min(8).max(200),
-  "display_name": zod.string().min(1).max(60).nullish()
+  "display_name": zod.union([zod.literal(""), zod.string().trim().max(40).regex(/^[\p{L}\p{N} ._'-]+$/u, "Use letters, numbers, spaces and . _ ' - only")]).nullish()
 });
 
 export const LoginBody = zod.object({
@@ -26,7 +26,16 @@ export const UserPublic = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "display_name": zod.string().nullish(),
-  "created_at": zod.string()
+  "created_at": zod.string(),
+  "weekly_digest": zod.boolean().optional()
+});
+
+/**
+ * @summary Update the logged-in user's own settings
+ */
+export const UpdateMeBody = zod.object({
+  "display_name": zod.string().trim().min(2).max(40).regex(/^[\p{L}\p{N} ._'-]+$/u, "Use letters, numbers, spaces and . _ ' - only").nullish(),
+  "weekly_digest": zod.boolean().optional()
 });
 
 /**

@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { fetchMarketData, fetchInsiderData, type MarketData } from "./market-data";
 import { calculateDcf, calculateGraham, type DcfResult, type GrahamResult } from "./valuation";
+import { formatMoney } from "./format";
 import { logger } from "./logger";
 
 export interface WatchlistJobResultItem {
@@ -34,11 +35,15 @@ async function publishOrUpdateAnalysis(
   const title = `${company.companyName ?? company.ticker} (${company.ticker}) \u2014 Auto DCF`;
   const grahamNote =
     graham.grahamNumber != null
-      ? ` Graham-tall (AutoValue): $${graham.grahamNumber.toFixed(2)}.`
+      ? ` Graham-tall (AutoValue): ${formatMoney(graham.grahamNumber, market.currency)}.`
+      : "";
+  const fxNote =
+    market.financialCurrency !== market.currency
+      ? ` Regnskapstall i ${market.financialCurrency} er omregnet til ${market.currency} (kurs ${market.fxRate.toFixed(4)}).`
       : "";
   const notes =
     `Automatisk generert av Sievoo sin ukentlig overv\u00e5kingsjobb (Yahoo Finance-data). ` +
-    `Insider-score: ${insiderScore}/100.${grahamNote} Sist oppdatert: ${new Date().toISOString().slice(0, 10)}.`;
+    `Insider-score: ${insiderScore}/100.${grahamNote}${fxNote} Sist oppdatert: ${new Date().toISOString().slice(0, 10)}.`;
 
   const fullInputs = {
     inputs: {
@@ -80,6 +85,7 @@ async function publishOrUpdateAnalysis(
     userNotes: notes,
     fullInputsJson: JSON.stringify(fullInputs),
     authorAlias: "Sievoo Auto-DCF",
+    currency: market.currency,
   };
 
   if (company.publishedAnalysisId) {
@@ -185,6 +191,7 @@ export async function processCompany(
       marginOfSafety: dcf.marginOfSafety,
       eps: market.eps,
       bookValuePerShare: market.bookValuePerShare,
+      currency: market.currency,
       grahamNumber: graham.grahamNumber,
       grahamMarginOfSafety: graham.marginOfSafety,
       insiderScore,

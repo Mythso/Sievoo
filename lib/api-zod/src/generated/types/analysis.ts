@@ -23,4 +23,15 @@ export interface Analysis {
   author_alias: string;
   has_edit_pin?: boolean;
   projection_years: number;
+  /**
+     * Set when the analysis was published by a logged-in Sievoo account
+     * @nullable
+     */
+  user_id?: number | null;
+  /**
+     * Trading currency of the ticker (ISO code). Null means unknown (treated as USD).
+     * @nullable
+     */
+  currency?: string | null;
+  comments_count?: number;
 }

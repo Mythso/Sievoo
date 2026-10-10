@@ -6,17 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { List, TrendingUp } from 'lucide-react';
-import { format } from 'date-fns';
-import {
-  LineChart as RechartsLineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import { formatMoney } from '@/lib/format';
+import { ValuationHistoryChart } from '@/components/community/ValuationHistoryChart';
 
 interface WatchlistValuation {
   price: number | null;
@@ -26,6 +17,7 @@ interface WatchlistValuation {
   margin_of_safety: number | null;
   graham_number: number | null;
   graham_margin_of_safety: number | null;
+  currency?: string | null;
   status: 'ok' | 'error';
   computed_at: string;
 }
@@ -56,8 +48,8 @@ interface WatchlistHistoryData {
   points: WatchlistHistoryPoint[];
 }
 
-function fmt(value: number | null | undefined) {
-  return value != null ? `$${value.toFixed(2)}` : '\u2014';
+function fmt(value: number | null | undefined, currency?: string | null) {
+  return formatMoney(value, currency);
 }
 
 export default function Watchlist() {
@@ -137,18 +129,18 @@ export default function Watchlist() {
                       return (
                         <TableRow key={c.id} className="border-border hover:bg-muted/10">
                           <TableCell className="font-mono font-bold">
-                            <Link href={`/calculator?ticker=${c.ticker}`} className="hover:text-primary">
+                            <Link href={`/stock/${encodeURIComponent(c.ticker)}`} className="hover:text-primary">
                               {c.ticker}
                             </Link>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{c.company_name ?? '\u2014'}</TableCell>
-                          <TableCell className="text-right font-mono">{fmt(v?.price)}</TableCell>
-                          <TableCell className="text-right font-mono text-emerald-400">{fmt(v?.base_dcf)}</TableCell>
-                          <TableCell className="text-right font-mono text-amber-400">{fmt(v?.graham_number)}</TableCell>
+                          <TableCell className="text-right font-mono">{fmt(v?.price, v?.currency)}</TableCell>
+                          <TableCell className="text-right font-mono text-emerald-400">{fmt(v?.base_dcf, v?.currency)}</TableCell>
+                          <TableCell className="text-right font-mono text-amber-400">{fmt(v?.graham_number, v?.currency)}</TableCell>
                           <TableCell className="text-right font-mono">
                             {v?.margin_of_safety != null ? (
                               <Badge variant={v.margin_of_safety > 0 ? 'default' : 'destructive'} className="font-mono">
-                                {(v.margin_of_safety * 100).toFixed(1)}%
+                                {v.margin_of_safety.toFixed(1)}%
                               </Badge>
                             ) : (
                               '\u2014'
@@ -215,13 +207,6 @@ function HistoryTab({
     })();
   }, [selectedId]);
 
-  const chartData = (history?.points ?? []).map((p) => ({
-    date: format(new Date(p.computed_at), 'MMM d, yyyy'),
-    Price: p.price,
-    'AutoDCF (Base)': p.base_dcf,
-    'AutoValue (Graham)': p.graham_number,
-  }));
-
   const selected = companies.find((c) => String(c.id) === selectedId);
   const latest = history?.points[history.points.length - 1];
 
@@ -263,41 +248,21 @@ function HistoryTab({
           </div>
         ) : (
           <>
-            <div className="h-[380px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsLineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
-                    tickFormatter={(v) => `$${v}`}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
-                    formatter={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : '\u2014')}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="Price" stroke="#e5e7eb" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                  <Line type="monotone" dataKey="AutoDCF (Base)" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                  <Line type="monotone" dataKey="AutoValue (Graham)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                </RechartsLineChart>
-              </ResponsiveContainer>
-            </div>
+            <ValuationHistoryChart points={history.points} currency={selected?.latest_valuation?.currency ?? null} height={380} />
 
             {latest && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 mt-6 border-t border-border">
                 <div className="bg-background rounded-lg border border-border p-3 text-center">
                   <p className="text-xs text-muted-foreground">Latest Price</p>
-                  <p className="text-lg font-bold font-mono">{fmt(latest.price)}</p>
+                  <p className="text-lg font-bold font-mono">{fmt(latest.price, selected?.latest_valuation?.currency)}</p>
                 </div>
                 <div className="bg-background rounded-lg border border-border p-3 text-center">
                   <p className="text-xs text-muted-foreground">AutoDCF (Base)</p>
-                  <p className="text-lg font-bold font-mono text-emerald-400">{fmt(latest.base_dcf)}</p>
+                  <p className="text-lg font-bold font-mono text-emerald-400">{fmt(latest.base_dcf, selected?.latest_valuation?.currency)}</p>
                 </div>
                 <div className="bg-background rounded-lg border border-border p-3 text-center">
                   <p className="text-xs text-muted-foreground">AutoValue (Graham)</p>
-                  <p className="text-lg font-bold font-mono text-amber-400">{fmt(latest.graham_number)}</p>
+                  <p className="text-lg font-bold font-mono text-amber-400">{fmt(latest.graham_number, selected?.latest_valuation?.currency)}</p>
                 </div>
                 <div className="bg-background rounded-lg border border-border p-3 text-center">
                   <p className="text-xs text-muted-foreground">Runs Recorded</p>

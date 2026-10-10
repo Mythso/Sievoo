@@ -25,6 +25,12 @@ import Contact from '@/pages/Contact';
 import Admin from '@/pages/Admin';
 import Account from '@/pages/Account';
 import Legal from '@/pages/Legal';
+import Stocks from '@/pages/Stocks';
+import Stock from '@/pages/Stock';
+import AnalysisDetail from '@/pages/AnalysisDetail';
+import Profile from '@/pages/Profile';
+import TrackRecord from '@/pages/TrackRecord';
+import { LanguageProvider } from '@/lib/i18n';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,8 +53,15 @@ function Router() {
           <Route path="/fire" component={Fire} />
           <Route path="/portfolio" component={Portfolio} />
           <Route path="/watchlist" component={Watchlist} />
+          <Route path="/stocks" component={Stocks} />
+          <Route path="/stock/:ticker" component={Stock} />
+          <Route path="/analysis/:id" component={AnalysisDetail} />
+          <Route path="/u/:id" component={Profile} />
+          <Route path="/track-record" component={TrackRecord} />
           <Route path="/academy" component={Academy} />
           <Route path="/academy/:slug" component={Article} />
+          <Route path="/no/academy" component={Academy} />
+          <Route path="/no/academy/:slug" component={Article} />
           <Route path="/contact" component={Contact} />
           <Route path="/admin" component={Admin} />
           <Route path="/account" component={Account} />
@@ -79,12 +92,14 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
       <TooltipProvider delayDuration={300}>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Router />
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

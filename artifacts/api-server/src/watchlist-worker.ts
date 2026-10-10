@@ -5,9 +5,17 @@
  * always-on web server in index.ts.
  */
 import { runWatchlistUpdate } from "./lib/watchlist-job";
+import { runAlertCheck, sendWeeklyDigests } from "./lib/alerts";
 import { logger } from "./lib/logger";
 
 runWatchlistUpdate()
+  .then(async (results) => {
+    // Alerts (and, weekly, the digest) run right after fresh numbers land.
+    // Failures here are logged but never fail the valuation run itself.
+    await runAlertCheck().catch((err) => logger.error({ err }, "Alert check failed"));
+    await sendWeeklyDigests().catch((err) => logger.error({ err }, "Weekly digest failed"));
+    return results;
+  })
   .then((results) => {
     const ok = results.filter((r) => r.status === "ok").length;
     const failed = results.filter((r) => r.status === "error").length;

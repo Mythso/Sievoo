@@ -27,6 +27,7 @@ export const listAnalysesQueryOffsetDefault = 0;
 export const ListAnalysesQueryParams = zod.object({
   "sort": zod.enum(['newest', 'most_liked', 'margin_of_safety']).default(listAnalysesQuerySortDefault),
   "ticker": zod.coerce.string().nullish(),
+  "user_id": zod.coerce.number().nullish(),
   "limit": zod.coerce.number().default(listAnalysesQueryLimitDefault),
   "offset": zod.coerce.number().default(listAnalysesQueryOffsetDefault)
 })
@@ -47,7 +48,10 @@ export const ListAnalysesResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number()
+  "projection_years": zod.number(),
+  "user_id": zod.number().nullish().describe('Set when the analysis was published by a logged-in Sievoo account'),
+  "currency": zod.string().nullish().describe('Trading currency of the ticker (ISO code). Null means unknown (treated as USD).'),
+  "comments_count": zod.number().optional()
 })),
   "total": zod.number()
 })
@@ -68,7 +72,8 @@ export const CreateAnalysisBody = zod.object({
   "full_inputs_json": zod.string(),
   "author_alias": zod.string(),
   "edit_pin": zod.string().nullish(),
-  "projection_years": zod.number().optional()
+  "projection_years": zod.number().optional(),
+  "currency": zod.string().nullish()
 })
 
 export const CreateAnalysisResponse = zod.object({
@@ -86,7 +91,10 @@ export const CreateAnalysisResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number()
+  "projection_years": zod.number(),
+  "user_id": zod.number().nullish().describe('Set when the analysis was published by a logged-in Sievoo account'),
+  "currency": zod.string().nullish().describe('Trading currency of the ticker (ISO code). Null means unknown (treated as USD).'),
+  "comments_count": zod.number().optional()
 })
 
 
@@ -125,19 +133,22 @@ export const GetAnalysisResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number()
+  "projection_years": zod.number(),
+  "user_id": zod.number().nullish().describe('Set when the analysis was published by a logged-in Sievoo account'),
+  "currency": zod.string().nullish().describe('Trading currency of the ticker (ISO code). Null means unknown (treated as USD).'),
+  "comments_count": zod.number().optional()
 })
 
 
 /**
- * @summary Edit an analysis (requires PIN)
+ * @summary Edit an analysis (owner session, or PIN for anonymous analyses)
  */
 export const UpdateAnalysisParams = zod.object({
   "id": zod.coerce.number()
 })
 
 export const UpdateAnalysisBody = zod.object({
-  "pin": zod.string(),
+  "pin": zod.string().nullish().describe('Required for anonymous analyses with a PIN. Not needed when the owner is logged in.'),
   "title": zod.string().nullish(),
   "user_notes": zod.string().nullish(),
   "full_inputs_json": zod.string().nullish(),
@@ -164,19 +175,22 @@ export const UpdateAnalysisResponse = zod.object({
   "created_at": zod.string(),
   "author_alias": zod.string(),
   "has_edit_pin": zod.boolean().optional(),
-  "projection_years": zod.number()
+  "projection_years": zod.number(),
+  "user_id": zod.number().nullish().describe('Set when the analysis was published by a logged-in Sievoo account'),
+  "currency": zod.string().nullish().describe('Trading currency of the ticker (ISO code). Null means unknown (treated as USD).'),
+  "comments_count": zod.number().optional()
 })
 
 
 /**
- * @summary Delete an analysis (requires PIN)
+ * @summary Delete an analysis (owner session, or PIN for anonymous analyses)
  */
 export const DeleteAnalysisParams = zod.object({
   "id": zod.coerce.number()
 })
 
 export const DeleteAnalysisBody = zod.object({
-  "pin": zod.string()
+  "pin": zod.string().nullish()
 })
 
 export const DeleteAnalysisResponse = zod.void()
@@ -206,7 +220,8 @@ export const ListCommentsResponseItem = zod.object({
   "analysis_id": zod.number(),
   "author_name": zod.string(),
   "comment_text": zod.string(),
-  "created_at": zod.string()
+  "created_at": zod.string(),
+  "user_id": zod.number().nullish()
 })
 export const ListCommentsResponse = zod.array(ListCommentsResponseItem)
 
@@ -218,17 +233,21 @@ export const CreateCommentParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const createCommentBodyCommentTextMax = 2000;
+
+
+
 export const CreateCommentBody = zod.object({
-  "author_name": zod.string(),
-  "comment_text": zod.string()
-})
+  "comment_text": zod.string().min(1).max(createCommentBodyCommentTextMax)
+}).describe('Commenting requires a logged-in account; the author name is taken from the account.')
 
 export const CreateCommentResponse = zod.object({
   "id": zod.number(),
   "analysis_id": zod.number(),
   "author_name": zod.string(),
   "comment_text": zod.string(),
-  "created_at": zod.string()
+  "created_at": zod.string(),
+  "user_id": zod.number().nullish()
 })
 
 

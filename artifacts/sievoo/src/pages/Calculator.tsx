@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Download, Upload, Share2, Calculator as CalcIcon, ShieldAlert, ArrowRight, Printer } from 'lucide-react';
 import { useCreateAnalysis, useGetAnalysis, getGetAnalysisQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMe, publicNameOf } from '@/lib/auth';
 
 type TVMethod = 'perpetuity' | 'ebitda';
 
@@ -36,9 +38,12 @@ const DEFAULT_INPUTS: CalcInputs = {
 };
 
 export default function Calculator() {
-  const [location] = useLocation();
+  const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const forkId = searchParams.get('fork') ? parseInt(searchParams.get('fork')!) : null;
+  const tickerParam = (searchParams.get('ticker') ?? '').trim().toUpperCase().slice(0, 16);
+  const { data: me } = useMe();
+  const queryClient = useQueryClient();
 
   const { toast } = useToast();
   const { data: forkedData } = useGetAnalysis(forkId!, {
@@ -60,7 +65,8 @@ export default function Calculator() {
   }, []);
 
   // Ticker / Company (shown on the output card, used for publishing & the share card)
-  const [ticker, setTicker] = useState('');
+  // Pre-filled from ?ticker= (links from /stock pages), otherwise empty.
+  const [ticker, setTicker] = useState(tickerParam);
   const [companyName, setCompanyName] = useState('');
   const [isLookingUpName, setIsLookingUpName] = useState(false);
 
@@ -236,11 +242,13 @@ export default function Calculator() {
   const [pubPin, setPubPin] = useState('');
 
   const handlePublish = () => {
-    if (!ticker || !pubTitle || !alias) {
-      toast({ title: 'Missing fields', description: 'Ticker, Title, and Alias required.', variant: 'destructive' });
+    // Logged-in users publish under their account name (the server ignores
+    // the alias for them); anonymous publishing still needs an alias.
+    if (!ticker || !pubTitle || (!me && !alias)) {
+      toast({ title: 'Missing fields', description: me ? 'Ticker and Title required.' : 'Ticker, Title, and Alias required.', variant: 'destructive' });
       return;
     }
-    localStorage.setItem('sievoo_alias', alias);
+    if (!me) localStorage.setItem('sievoo_alias', alias);
     
     createMutation.mutate({
       data: {
@@ -252,13 +260,18 @@ export default function Calculator() {
         bull_dcf: scenarios.bull.vDcf,
         margin_of_safety: upside,
         projection_years: inputs.projectionYears,
-        author_alias: alias,
+        author_alias: me ? publicNameOf(me) : alias,
         full_inputs_json: JSON.stringify({ inputs, gates, scores }),
-        edit_pin: pubPin || undefined
+        edit_pin: me ? undefined : (pubPin || undefined)
       }
     }, {
-      onSuccess: () => {
+      onSuccess: (created) => {
         toast({ title: 'Published!', description: 'Your analysis is live.' });
+        queryClient.invalidateQueries({ queryKey: ['/api/analyses'] });
+        setLocation(`/analysis/${created.id}`);
+      },
+      onError: (err: any) => {
+        toast({ title: 'Could not publish', description: err?.data?.error ?? err?.message, variant: 'destructive' });
       }
     });
   };
@@ -830,14 +843,27 @@ export default function Calculator() {
                         <Label>Title / Thesis</Label>
                         <Input value={pubTitle} onChange={e => setPubTitle(e.target.value)} placeholder="Strong moat, ignored cash flow..." />
                       </div>
-                      <div className="grid gap-2">
-                        <Label>Author Alias</Label>
-                        <Input value={alias} onChange={e => setAlias(e.target.value)} placeholder="ValueHunter99" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Edit PIN (Optional, 4 digits)</Label>
-                        <Input type="password" maxLength={4} value={pubPin} onChange={e => setPubPin(e.target.value)} placeholder="1234" className="font-mono" />
-                      </div>
+                      {me ? (
+                        <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                          Publishing as <span className="font-semibold text-foreground">{publicNameOf(me)}</span>. It goes on your profile, you can delete it any time, and it gets scored on the{' '}
+                          <Link href="/track-record" className="text-primary hover:underline">leaderboard</Link> after 30 days.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid gap-2">
+                            <Label>Author Alias</Label>
+                            <Input value={alias} onChange={e => setAlias(e.target.value)} placeholder="ValueHunter99" />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Edit PIN (Optional, 4 digits)</Label>
+                            <Input type="password" maxLength={4} value={pubPin} onChange={e => setPubPin(e.target.value)} placeholder="1234" className="font-mono" />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            <a href="/account" target="_blank" rel="noopener" className="text-primary hover:underline">Log in</a>{' '}
+                            (opens a new tab, so your model here stays put) to publish under your own name, get it on your profile and get scored on the leaderboard.
+                          </p>
+                        </>
+                      )}
                     </div>
                     <DialogFooter>
                       <Button onClick={handlePublish} disabled={createMutation.isPending} className="w-full font-mono bg-primary text-primary-foreground hover:bg-primary/90">
