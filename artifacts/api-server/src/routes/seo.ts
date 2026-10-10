@@ -84,8 +84,13 @@ async function renderStock(rawTicker: string): Promise<SeoPage> {
   const name = company.companyName ?? ticker;
   const cur = v?.currency ?? null;
   const updated = v ? v.computedAt.toISOString().slice(0, 10) : null;
+  // Loss-making companies get a negative DCF; "DCF -$445" makes a poor
+  // search title, so say what it means instead.
+  const negativeDcf = v?.baseDcf != null && v.baseDcf <= 0;
   const title = v
-    ? `${ticker} Intrinsic Value: DCF ${formatMoney(v.baseDcf, cur)} vs Price ${formatMoney(v.price, cur)} | Sievoo`
+    ? negativeDcf
+      ? `${ticker} Valuation: Negative Free Cash Flow DCF vs Price ${formatMoney(v.price, cur)} | Sievoo`
+      : `${ticker} Intrinsic Value: DCF ${formatMoney(v.baseDcf, cur)} vs Price ${formatMoney(v.price, cur)} | Sievoo`
     : `${ticker} Intrinsic Value – DCF & Graham Number | Sievoo`;
   const description = v
     ? truncate(

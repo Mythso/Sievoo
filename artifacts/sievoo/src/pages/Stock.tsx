@@ -120,6 +120,11 @@ export default function Stock() {
           <Stat
             label={t('DCF margin of safety', 'DCF-sikkerhetsmargin')}
             value={formatPercent(s.margin_of_safety)}
+            sub={
+              s.base_dcf != null && s.base_dcf <= 0
+                ? t('Negative free cash flow - DCF not meaningful', 'Negativ fri kontantstrøm - DCF gir lite mening')
+                : undefined
+            }
             className={mosClass(s.margin_of_safety)}
           />
           <Stat
